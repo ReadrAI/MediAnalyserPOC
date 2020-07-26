@@ -135,3 +135,4 @@ dmypy.json
 Data Acquisition/chromedriver_v*
 metadata/*
 raw_data/*
+utils/scrape_drivers/*
