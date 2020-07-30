@@ -6,8 +6,11 @@ import psycopg2
 import sqlalchemy
 from sqlalchemy.orm import sessionmaker
 
+import pandas as pd
+
 from data_model import models
 from utils import sql_utils
+from utils.verbose import Verbose
 
 
 def getDBUrl():
@@ -55,12 +58,13 @@ def dropAllTables(schema=models.schema):
     meta.drop_all()
 
 
-def getSource(name, schema=models.schema):
+def getSource(name, schema=models.schema, verbose=Verbose.ERROR):
     sources = getDBSession(schema=schema).query(
         models.Source).filter(models.Source.source_name == name).all()
     if len(sources) > 1:
-        print("Warning: multiple sources matching name", name)
-        print("Possible matches", [x['source_name'] for x in sources])
+        if verbose <= Verbose.WARNING:
+            print("Warning: multiple sources matching name", name)
+            print("Possible matches", [x['source_name'] for x in sources])
     elif len(sources) == 0:
         return None
     return sources[0]
@@ -74,11 +78,26 @@ def getSourceID(name, schema=models.schema):
         return str(source.source_uuid)
 
 
-def insertEntry(entry, schema=models.schema):
+def insertEntry(entry, schema=models.schema, verbose=Verbose.ERROR):
     session = getDBSession()
     try:
         session.add(entry)
         session.commit()
+        return True
     except (psycopg2.errors.UniqueViolation, sqlalchemy.exc.IntegrityError):
-        print("Entry already exists for ", entry)
+        if verbose <= Verbose.WARNING:
+            print("Entry already exists for ", entry)
         session.rollback()
+        return False
+
+
+def getRawArticles(schema=models.schema):
+    query = getDBSession(models.schema).query(
+        models.Article.article_uuid, models.Article.title,
+        models.Article.description, models.ArticleContent.article_content
+    ).filter(
+        models.Article.description.isnot(None)
+    ).outerjoin(
+        models.ArticleContent, models.ArticleContent.article_uuid == models.Article.article_uuid
+    )
+    return pd.read_sql(query.statement, query.session.bind)

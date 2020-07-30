@@ -1,6 +1,50 @@
 from utils import sql_utils
 from data_model import models
 
+# Missing Sources
+missing_sources = {
+    "CP24 Toronto's Breaking News",
+    'Calgary Herald',
+    'Canada NewsWire',
+    'Ctvnews.ca',
+    'DiscoverMooseJaw.com',
+    'Edmonton Journal',
+    'Gizmodo.com',
+    'Global News',
+    'HalifaxToday.ca',
+    'Lifehacker.com',
+    'Montreal Gazette',
+    'Net Newsledger',
+    'OttawaMatters.com',
+    'OurWindsor.ca',
+    'Shepherdgazette.com',
+    'TheChronicleHerald.ca',
+    'Toronto Star',
+    'Winnipeg Sun',
+    'iNFOnews',
+    'Adweek',
+    'Androidrookies.com',
+    'Business Wire',
+    'Cointelegraph',
+    'Fstoppers',
+    'Futurity: Research News',
+    'Juxtapoz.com',
+    'Lifehack.org',
+    'MarketWatch',
+    'Mint.com',
+    'Motley Fool',
+    'Project Syndicate',
+    'Scientific American',
+    'Sky Sports',
+    'Slashdot.org',
+    'The Economist',
+    'The Indian Express',
+    'Theguardian.compolitics',
+    'Theguardian.comus-news',
+    'Visual.ly',
+    'Wellnessmama.com',
+    'Worldsoccertalk.com'}
+
 
 def populate():
     sql_utils.insertEntry(models.Source(
