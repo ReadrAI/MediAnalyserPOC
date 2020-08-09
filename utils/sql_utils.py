@@ -51,8 +51,6 @@ def getDBSession(schema=models.schema):
 
 
 def dropAllTables(schema=models.schema):
-    global engines
-    global sessions
     meta = sqlalchemy.MetaData(sql_utils.getEngine(schema=schema))
     meta.reflect()
     meta.drop_all()
@@ -78,6 +76,18 @@ def getSourceID(name, schema=models.schema):
         return str(source.source_uuid)
 
 
+def getRawArticles(schema=models.schema):
+    query = getDBSession(models.schema).query(
+        models.Article.article_uuid, models.Article.title,
+        models.Article.description, models.ArticleContent.article_content
+    ).filter(
+        models.Article.description.isnot(None)
+    ).outerjoin(
+        models.ArticleContent, models.ArticleContent.article_uuid == models.Article.article_uuid
+    )
+    return pd.read_sql(query.statement, query.session.bind)
+
+
 def insertEntry(entry, schema=models.schema, verbose=Verbose.ERROR):
     session = getDBSession()
     try:
@@ -91,13 +101,10 @@ def insertEntry(entry, schema=models.schema, verbose=Verbose.ERROR):
         return False
 
 
-def getRawArticles(schema=models.schema):
-    query = getDBSession(models.schema).query(
-        models.Article.article_uuid, models.Article.title,
-        models.Article.description, models.ArticleContent.article_content
-    ).filter(
-        models.Article.description.isnot(None)
-    ).outerjoin(
-        models.ArticleContent, models.ArticleContent.article_uuid == models.Article.article_uuid
-    )
-    return pd.read_sql(query.statement, query.session.bind)
+def populateFeeds(source_name, feed_url, section=None):
+    source_uuid = sql_utils.getSourceID(source_name)
+    return sql_utils.insertEntry(models.RSSFeed(
+        source_uuid=source_uuid,
+        feed_url=feed_url,
+        feed_section=section
+    ))

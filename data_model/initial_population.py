@@ -46,7 +46,98 @@ missing_sources = {
     'Worldsoccertalk.com'}
 
 
-def populate():
+oan_rss_feeds = [
+    ("One America News Network", "http://www.oann.com/feed", None),
+    ("One America News Network", "Top News", "http://www.oann.com/category/newsroom/feed"),
+    ("One America News Network", "World", "http://www.oann.com/category/world/feed"),
+    ("One America News Network", "Business", "http://www.oann.com/category/business/feed"),
+    ("One America News Network", "Economy", "http://www.oann.com/category/economy/feed"),
+    ("One America News Network", "Money", "http://www.oann.com/category/money/feed"),
+    ("One America News Network", "Technology", "http://www.oann.com/category/tech/feed"),
+    ("One America News Network", "Entertainment", "http://www.oann.com/category/entertainment/feed")
+]
+
+
+nyt_rss_feeds = [
+    "Africa",
+    "Americas",
+    "ArtandDesign",
+    "Arts",
+    "AsiaPacific",
+    "Automobile",
+    "Baseball",
+    "Books",
+    "Business",
+    "Climate",
+    "CollegeBasketball",
+    "CollegeFootball",
+    "Dance",
+    "Dealbook",
+    "DiningandWine",
+    "Economy",
+    "Education",
+    "EnergyEnvironment",
+    "Europe",
+    "FashionandStyle",
+    "Golf",
+    "Health",
+    "Hockey",
+    "HomePage",
+    "Jobs",
+    "Lens",
+    "MediaandAdvertising",
+    "MiddleEast",
+    "MostEmailed",
+    "MostShared",
+    "MostViewed",
+    "Movies",
+    "Music",
+    "NYRegion",
+    "Obituaries",
+    "PersonalTech",
+    "Politics",
+    "ProBasketball",
+    "ProFootball",
+    "RealEstate",
+    "Science",
+    "SmallBusiness",
+    "Soccer",
+    "Space",
+    "Sports",
+    "SundayBookReview",
+    "Sunday-Review",
+    "Technology",
+    "Television",
+    "Tennis",
+    "Theater",
+    "TMagazine",
+    "Travel",
+    "Upshot",
+    "US",
+    "Weddings",
+    "Well",
+    "YourMoney"
+]
+
+
+def populateNYTFeeds():
+    count = 0
+    for section in nyt_rss_feeds:
+        count += sql_utils.populateFeeds(
+            "New York Times",
+            "https://rss.nytimes.com/services/xml/rss/nyt/%s.xml" % section,
+            section)
+    return count
+
+
+def populateONAFeeds():
+    count = 0
+    for feed in oan_rss_feeds:
+        count += sql_utils.populateFeeds(feed[0], feed[2], feed[1])
+    return count
+
+
+def populateSources():
     sql_utils.insertEntry(models.Source(
         source_name='New York Times',
         country='us',

@@ -5,6 +5,7 @@ Util functions for scraping and html queries
 import time
 import json
 import requests
+import feedparser
 import pandas as pd
 
 from datetime import datetime
@@ -76,7 +77,8 @@ def getNYTArticleContent(url):
 
 
 def importNYT(data, source_name, verbose=Verbose.ERROR):
-    if data['status'] == 'OK':
+    count = 0
+    if data['status'] == 'OK' and data['results'] is not None:
         if verbose <= Verbose.WARNING and len(data['results']) != data['num_results']:
             print("Number of results not matching:",
                   len(data['results']), data['num_results'])
@@ -87,22 +89,21 @@ def importNYT(data, source_name, verbose=Verbose.ERROR):
                 if verbose <= Verbose.ERROR:
                     print("Source Not Found:", source_name)
                 return False
-            sql_utils.insertEntry(models.Article(
+            count += sql_utils.insertEntry(models.Article(
                 article_url=article['url'],
                 source_uuid=source_uuid,
                 provider_uuid=source_uuid,
                 title=article['title'],
                 description=article['abstract'],
-                authors=article['byline'],
+                authors=[article['byline']],
                 published_at=article['published_date'],
                 updated_at=article['updated_date']
             ))
-        return True
     else:
         if verbose <= Verbose.ERROR:
             print("Data error:", data['status']
                   if 'status' in data.keys() else "JSON Error")
-        return False
+    return count
 
 
 def getNYTSections(api_key):
@@ -119,15 +120,15 @@ def pipelineNYTHeadlines(loadDisk=False, fetchSource=False, verbose=Verbose.ERRO
         'realestate', 'science', 'sports', 'sundayreview', 'technology', 'theater', 't-magazine',
         'travel', 'upshot', 'us', 'world']
 
+    count = 0
     for topic in sections:
         url = "https://api.nytimes.com/svc/topstories/v2/%s.json?api-key=%s" % (
             topic, source.api_key)
         # source.api_url.replace("API_KEY", source.api_key)
         file_name = getFileName(topic, source_name)
-        success = __pipelineNYT(source_name, file_name, url, loadDisk=loadDisk,
-                                fetchSource=fetchSource, verbose=verbose)
-        if not success:
-            break
+        count += __pipelineNYT(source_name, file_name, url, loadDisk=loadDisk,
+                               fetchSource=fetchSource, verbose=verbose)
+    return count
 
 
 def pipelineNYTNewsWire(startPage=0, loadDisk=False, fetchSource=False, verbose=Verbose.ERROR):
@@ -138,8 +139,8 @@ def pipelineNYTNewsWire(startPage=0, loadDisk=False, fetchSource=False, verbose=
     file_name = getFileName('newswire', source_name, page)
     url = "https://api.nytimes.com/svc/news/v3/content/all/all.json?limit=%d&offset=%d&api-key=%s" % (
         increment, page * increment, source.api_key)
-    __pipelineNYT(source_name, file_name, url, loadDisk=loadDisk,
-                  fetchSource=fetchSource, verbose=verbose)
+    return __pipelineNYT(source_name, file_name, url, loadDisk=loadDisk,
+                         fetchSource=fetchSource, verbose=verbose)
 
 
 def __pipelineNYT(source_name, file_name, url, loadDisk=False, fetchSource=False, verbose=Verbose.ERROR):
@@ -157,21 +158,16 @@ def __pipelineNYT(source_name, file_name, url, loadDisk=False, fetchSource=False
 
 def importNewsAPIArticles(articles, source_name, verbose=Verbose.ERROR):
     provider_uuid = str(sql_utils.getSource(source_name).source_uuid)
-    missing_sources = []
+    count = 0
     for i, a in articles.iterrows():
         source_name = a['source']['name']
         source = sql_utils.getSource(source_name)
         if source is None:
             source_url = getRootUrl(a['url'])
-            success = sql_utils.insertEntry(models.Source(
+            count += sql_utils.insertEntry(models.Source(
                 source_name=source_name,
                 website_url=source_url
             ))
-            if not success:
-                missing_sources.append(a)
-            else:
-                if verbose <= Verbose.ERROR:
-                    print("Added source %s: %s" % (source_name, source_url))
             source = sql_utils.getSource(source_name)
         source_uuid = str(source.source_uuid)
         sql_utils.insertEntry(models.Article(
@@ -191,7 +187,7 @@ def importNewsAPIArticles(articles, source_name, verbose=Verbose.ERROR):
                     article_uuid=str(article.article_uuid),
                     article_content=a['content']
                 ))
-    return set(missing_sources)
+    return count
 
 
 def importNewsAPISources(verbose=Verbose.ERROR):
@@ -216,7 +212,7 @@ def __fetchNewsAPI(content_type, url, verbose=Verbose.ERROR):
     content = []
     while True:
         if verbose <= Verbose.DEBUG:
-            print(page, (url % page))
+            print("Fetching", url % page)
         response = requests.get(url % page)
         json_response = response.json()
         if json_response['status'] == 'ok':
@@ -249,7 +245,7 @@ def __fetchNewsAPI(content_type, url, verbose=Verbose.ERROR):
     return content
 
 
-def pipelineAPINewsHeadline(loadDisk=False, fetchSource=False):
+def pipelineAPINewsHeadline(loadDisk=False, fetchSource=False, verbose=Verbose.ERROR):
     source_name = 'NewsAPI'
     file_name = getFileName('headlines', source_name)
     url = ('http://newsapi.org/v2/top-headlines?'
@@ -257,11 +253,13 @@ def pipelineAPINewsHeadline(loadDisk=False, fetchSource=False):
            'page=%s&'
            'language=en&'
            'country=us&'
+           'sortBy=publishedAt&'
            'apiKey=e30a64cfe1734e6794bdab67106590fa')
-    return __pipelineAPINews(source_name, file_name, url=url, fetchSource=fetchSource, loadDisk=loadDisk)
+    return __pipelineAPINews(source_name, file_name, url=url, fetchSource=fetchSource, loadDisk=loadDisk,
+                             verbose=verbose)
 
 
-def pipelineAPINewsTopic(topic, loadDisk=False, fetchSource=False):
+def pipelineAPINewsTopic(topic, loadDisk=False, fetchSource=False, verbose=Verbose.ERROR):
     source_name = 'NewsAPI'
     now = datetime.now()
     file_name = getFileName(topic, source_name)
@@ -272,8 +270,10 @@ def pipelineAPINewsTopic(topic, loadDisk=False, fetchSource=False):
            'pageSize=100&'
            'page=%s&'
            'language=en&'
+           'sortBy=publishedAt&'
            'apiKey=e30a64cfe1734e6794bdab67106590fa')
-    return __pipelineAPINews(source_name, file_name, url=url, fetchSource=fetchSource, loadDisk=loadDisk)
+    return __pipelineAPINews(source_name, file_name, url=url, fetchSource=fetchSource, loadDisk=loadDisk,
+                             verbose=verbose)
 
 
 def __pipelineAPINews(source_name, file_name, url=None, loadDisk=False, fetchSource=False, verbose=Verbose.ERROR):
@@ -288,3 +288,49 @@ def __pipelineAPINews(source_name, file_name, url=None, loadDisk=False, fetchSou
     if loadDisk:
         articles = pd.read_csv(file_name)
     return importNewsAPIArticles(articles, source_name, verbose=verbose)
+
+
+def __feedImporter(feed_data, source_uuid):
+    if 'entries' not in feed_data:
+        raise ValueError("No entries in feed")
+    if 'status' not in feed_data:
+        raise ValueError("No entries in feed")
+    count = 0
+    for a in feed_data['entries']:
+        count += sql_utils.insertEntry(models.Article(
+            article_url=a['link'],
+            source_uuid=source_uuid,
+            provider_uuid=source_uuid,
+            title=a['title'],
+            description=a['summary'],
+            published_at=a['published'],
+            authors=([a['author']] if 'author' in a else [])
+         ))
+    return count
+
+
+def importAllFeeds():
+    n_imported = 0
+    feeds = sql_utils.getDBSession().query(models.RSSFeed).all()
+    for feed_i in feeds:
+        data = feedparser.parse(feed_i.feed_url)
+        count = __feedImporter(data, feed_i.source_uuid)
+        n_imported += count
+    return n_imported
+
+
+def loadRoutine(verbose=Verbose.INFO):
+    count = 0
+    # RSS feeds
+    count += importAllFeeds()
+    # NYT
+    count += pipelineNYTHeadlines(fetchSource=True, verbose=verbose)
+    count += pipelineNYTNewsWire(fetchSource=True, verbose=verbose)
+    # NewsAPI
+    count += pipelineAPINewsHeadline(fetchSource=True, verbose=verbose)
+    for topic in [
+            'people', 'fashion', 'politics', 'COVID', 'elections', 'sport', 'news', 'war', 'world', 'europe',
+            'technology', 'science', 'movie', 'Trump', 'Biden', 'news', 'business', 'trade', 'stock', 'S&P500', 'tax',
+            'jobs', 'trends', 'design', 'tv']:
+        count += pipelineAPINewsTopic(topic=topic, fetchSource=True, verbose=verbose)
+    return count
