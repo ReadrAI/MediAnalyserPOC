@@ -164,13 +164,13 @@ def importNewsAPIArticles(articles, source_name, verbose=Verbose.ERROR):
         source = sql_utils.getSource(source_name)
         if source is None:
             source_url = getRootUrl(a['url'])
-            count += sql_utils.insertEntry(models.Source(
+            sql_utils.insertEntry(models.Source(
                 source_name=source_name,
                 website_url=source_url
             ))
             source = sql_utils.getSource(source_name)
         source_uuid = str(source.source_uuid)
-        sql_utils.insertEntry(models.Article(
+        count += sql_utils.insertEntry(models.Article(
             article_url=a['url'],
             source_uuid=source_uuid,
             provider_uuid=provider_uuid,
@@ -290,22 +290,28 @@ def __pipelineAPINews(source_name, file_name, url=None, loadDisk=False, fetchSou
     return importNewsAPIArticles(articles, source_name, verbose=verbose)
 
 
-def __feedImporter(feed_data, source_uuid):
+def __feedImporter(feed_data, source_uuid, verbose=Verbose.ERROR):
     if 'entries' not in feed_data:
         raise ValueError("No entries in feed")
     if 'status' not in feed_data:
         raise ValueError("No entries in feed")
     count = 0
     for a in feed_data['entries']:
-        count += sql_utils.insertEntry(models.Article(
-            article_url=a['link'],
-            source_uuid=source_uuid,
-            provider_uuid=source_uuid,
-            title=a['title'],
-            description=a['summary'],
-            published_at=a['published'],
-            authors=([a['author']] if 'author' in a else [])
-         ))
+        try:
+            count += sql_utils.insertEntry(models.Article(
+                article_url=a['link'],
+                source_uuid=source_uuid,
+                provider_uuid=source_uuid,
+                title=a['title'],
+                description=(a['summary'] if 'summary' in a else ''),
+                published_at=(
+                    a['published'] if ('published' in a and a['published'] != '' and a['published'] is not None)
+                    else datetime.utcnow()),
+                authors=([a['author']] if 'author' in a else [''])
+            ))
+        except KeyError:
+            if verbose <= Verbose.ERROR:
+                print("Key Error for source", source_uuid, a.keys(), a['link'])
     return count
 
 

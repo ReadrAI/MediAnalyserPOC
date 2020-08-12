@@ -119,6 +119,66 @@ nyt_rss_feeds = [
     "YourMoney"
 ]
 
+cnn_rss_feeds = [
+    ("Top Stories", "http://rss.cnn.com/rss/edition.rss"),
+    ("World", "http://rss.cnn.com/rss/edition_world.rss"),
+    ("Africa", "http://rss.cnn.com/rss/edition_africa.rss"),
+    ("Americas", "http://rss.cnn.com/rss/edition_americas.rss"),
+    ("Asia", "http://rss.cnn.com/rss/edition_asia.rss"),
+    ("Europe", "http://rss.cnn.com/rss/edition_europe.rss"),
+    ("Middle East", "http://rss.cnn.com/rss/edition_meast.rss"),
+    ("U.S.", "http://rss.cnn.com/rss/edition_us.rss"),
+    ("Money", "http://rss.cnn.com/rss/money_news_international.rss"),
+    ("Technology", "http://rss.cnn.com/rss/edition_technology.rss"),
+    ("Science & Space", "http://rss.cnn.com/rss/edition_space.rss"),
+    ("Entertainment", "http://rss.cnn.com/rss/edition_entertainment.rss"),
+    ("World Sport", "http://rss.cnn.com/rss/edition_sport.rss"),
+    ("Football", "http://rss.cnn.com/rss/edition_football.rss"),
+    ("Golf", "http://rss.cnn.com/rss/edition_golf.rss"),
+    ("Motorsport", "http://rss.cnn.com/rss/edition_motorsport.rss"),
+    ("Tennis", "http://rss.cnn.com/rss/edition_tennis.rss"),
+    ("Travel", "http://rss.cnn.com/rss/edition_travel.rss"),
+    ("Video", "http://rss.cnn.com/rss/cnn_freevideo.rss"),
+    ("Most Recent", "http://rss.cnn.com/rss/cnn_latest.rss")
+]
+
+
+fox_rss_feeds = [
+    ("Headlines", "http://feeds.foxnews.com/foxnews/latest"),
+    ("National", "http://feeds.foxnews.com/foxnews/national"),
+    ("World", "http://feeds.foxnews.com/foxnews/world"),
+    ("Politics", "http://feeds.foxnews.com/foxnews/politics"),
+    ("Business", "http://feeds.foxnews.com/foxnews/business"),
+    ("SciTech", "http://feeds.foxnews.com/foxnews/scitech"),
+    ("Health", "http://feeds.foxnews.com/foxnews/health"),
+    ("Entertainment", "http://feeds.foxnews.com/foxnews/entertainment"),
+    ("Views", "http://feeds.foxnews.com/foxnews/views"),
+    ("Blogs", "http://feeds.foxnews.com/foxnews/foxblogs"),
+    ("Mike Straka's Grrr!", "http://feeds.foxnews.com/foxnews/column/grrr"),
+    ("Pop Tarts", "http://feeds.foxnews.com/foxnews/column/poptarts"),
+    ("FOX 411", "http://feeds.foxnews.com/foxnews/column/fox411")
+]
+
+
+def populateFoxFeeds():
+    count = 0
+    for section in fox_rss_feeds:
+        count += sql_utils.populateFeeds(
+            "Fox News",
+            section[1],
+            section[0])
+    return count
+
+
+def populateCNNFeeds():
+    count = 0
+    for section in cnn_rss_feeds:
+        count += sql_utils.populateFeeds(
+            "BBC News",
+            section[1],
+            section[0])
+    return count
+
 
 def populateNYTFeeds():
     count = 0
