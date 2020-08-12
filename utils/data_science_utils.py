@@ -101,16 +101,16 @@ def createWord2VectorModel(attributes=list(w2v_attributes.keys())):
     setModel(Models.W2V, w2v_model)
 
 
-def createTFIDFModel(attribute, min_df=1, max_df=1.):
+def createTFIDFModel(attribute, min_df=1, max_df=1., ngram_range=(1, 1)):
     news_dict = getModel(Models.NEWS_DICT)
     w2v_model = getModel(Models.W2V)
 
     result = {}
     result['documents'] = [(v[attribute]) for v in news_dict.values()]
-    result['tfidf_vectorizer'] = TfidfVectorizer(stop_words=None, min_df=min_df, max_df=max_df)
+    result['tfidf_vectorizer'] = TfidfVectorizer(stop_words=None, min_df=min_df, max_df=max_df, ngram_range=ngram_range)
     result['tfidf_weights'] = result['tfidf_vectorizer'].fit_transform(result['documents'])
-    result['tfidf_embeddings'] = [w2v_model.wv.get_vector(word) for word
-                                  in result['tfidf_vectorizer'].get_feature_names()]
+    result['tfidf_embeddings'] = [getWordVector(word, w2v_model)
+                                  for word in result['tfidf_vectorizer'].get_feature_names()]
     result['news_vector'] = np.array(result['tfidf_weights'].todense() * result['tfidf_embeddings'])
 
     # df = pd.DataFrame(
@@ -120,10 +120,17 @@ def createTFIDFModel(attribute, min_df=1, max_df=1.):
     return result
 
 
+def getWordVector(word, w2v_model):
+    try:
+        return w2v_model.wv.get_vector(word)
+    except KeyError:
+        return np.zeros([w2v_size])
+
+
 def createNewsVectors(attributes=list(w2v_attributes.keys())):
     news_vect = {}
     for attribute_i in attributes:
-        news_vect[attribute_i] = createTFIDFModel(attribute_i, min_df=3, max_df=0.001)
+        news_vect[attribute_i] = createTFIDFModel(attribute_i, min_df=3, max_df=0.05, ngram_range=(1, 1))
     setModel(Models.NEWS_VECT, news_vect)
 
 
