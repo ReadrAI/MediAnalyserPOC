@@ -4,33 +4,33 @@
 
 1. Get Articles (once, weekly, daily, ...)
 
-   a. scraping & parsing
+    a. scraping & parsing
 
-   b. API access
+    b. API access
 
-   c. save to DB!!!
+    c. save to DB!!!
 
 2. Recognise keywords and main topic
 
-   a. TF-IDF
+    a. TF-IDF
 
-   b. ???
+    b. ???
 
 3. Group with other of the same topic
 
-   a. Main topic matching
+    a. Main topic matching
 
-   b. Hierarchy (decision tree?)
+    b. Hierarchy (decision tree?)
 
 4. Find divergences
 
-   a. diff on keyword set
+    a. diff on keyword set
 
-   b. difference of opinion
+    b. difference of opinion
 
-   c. difference of data sources
+    c. difference of data sources
 
-   d. difference in
+    d. difference in
 
 5. Represent articles and divergences
 
@@ -85,3 +85,9 @@ https://www.kaggle.com/pierremegret/gensim-word2vec-tutorial
 ### TF-IDF Vectorisation
 
 https://towardsdatascience.com/tf-idf-explained-and-python-sklearn-implementation-b020c5e83275
+
+### Mail service
+
+https://realpython.com/python-send-email/
+https://blog.mailtrap.io/send-emails-with-gmail-api/
+https://developers.google.com/gmail/api/guides/push

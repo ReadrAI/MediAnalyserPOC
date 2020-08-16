@@ -56,6 +56,14 @@ def dropAllTables(schema=models.schema):
     meta.drop_all()
 
 
+def getArticle(url, schema=models.schema):
+    articles = sql_utils.getDBSession().query(models.Article).filter(models.Article.article_url == url).all()
+    if len(articles) == 0:
+        return None
+    else:
+        return articles[0]
+
+
 def getSource(name, schema=models.schema, verbose=Verbose.ERROR):
     sources = getDBSession(schema=schema).query(
         models.Source).filter(models.Source.source_name == name).all()
@@ -68,12 +76,48 @@ def getSource(name, schema=models.schema, verbose=Verbose.ERROR):
     return sources[0]
 
 
+def getSearch(gmail_request_uuid, schema=models.schema):
+    searches = getDBSession().query(models.ArticleSearch)\
+        .filter(models.ArticleSearch.gmail_request_uuid == gmail_request_uuid).all()
+    if searches is None:
+        return None
+    else:
+        return searches[0]
+
+
 def getSourceID(name, schema=models.schema):
     source = getSource(name, schema)
     if source is None:
         return None
     else:
         return str(source.source_uuid)
+
+
+def getCustomerID(email, schema=models.schema):
+    customer_uuid = getDBSession().query(models.Customer.customer_uuid).filter(models.Customer.customer_email == email)\
+        .all()
+    if customer_uuid is None or len(customer_uuid) == 0:
+        return None
+    else:
+        return str(customer_uuid[0][0])
+
+
+def getOrSetCustomerID(email):
+    customer_uuid = sql_utils.getCustomerID(email)
+    if customer_uuid is None:
+        sql_utils.insertEntry(models.Customer(
+            customer_email=email
+        ))
+        customer_uuid = sql_utils.getCustomerID(email)
+    return customer_uuid
+
+
+def getSearchMailIDs():
+    return [r[0] for r in getDBSession().query(models.ArticleSearch.gmail_request_uuid).all()]
+
+
+def getInvalidEmailIDs():
+    return [i[0] for i in getDBSession().query(models.InvalidEmail.invalid_email_uuid).all()]
 
 
 def getRawArticles(schema=models.schema):
@@ -108,3 +152,19 @@ def populateFeeds(source_name, feed_url, section=None):
         feed_url=feed_url,
         feed_section=section
     ))
+
+
+def updateSearchStatus(article_search_uuid, status):
+    stmt = sqlalchemy.update(models.ArticleSearch)\
+        .where(models.ArticleSearch.article_search_uuid == article_search_uuid)\
+        .values(status=status)
+    sql_utils.getEngine().connect().execute(stmt)
+    sql_utils.getDBSession().commit()
+
+
+def updateSearch(article_search_uuid, gmail_answer_uuid):
+    stmt = sqlalchemy.update(models.ArticleSearch)\
+        .where(models.ArticleSearch.article_search_uuid == article_search_uuid)\
+        .values(gmail_answer_uuid=gmail_answer_uuid)
+    sql_utils.getEngine().connect().execute(stmt)
+    sql_utils.getDBSession().commit()

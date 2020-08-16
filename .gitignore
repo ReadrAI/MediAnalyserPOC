@@ -137,3 +137,5 @@ metadata/*
 raw_data/*
 ml_models/*
 utils/scrape_drivers/*
+data_visualisation/credentials.json
+data_visualisation/token.pickle

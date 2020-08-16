@@ -101,16 +101,18 @@ class ArticleSearch(Base):
     received_at = Column(DateTime, nullable=False, default=datetime.datetime.utcnow)
     replied_at = Column(DateTime, default=None)
 
-    request_url = Column(Text)
-    number_of_results = Column(Integer, default=5)
+    search_url = Column(Text)
+    search_article = Column(UUID, ForeignKey(schema + ".articles.article_uuid"))
+    n_results = Column(Integer, default=5)
     status = Column(Text, default='')
 
     customer_uuid = Column(UUID, ForeignKey(schema + ".customers.customer_uuid"), nullable=False)
 
+    article = relationship("Article")
     customer = relationship("Customer")
 
     def __repr__(self):
-        return '<Article Search {}: {}>'.format(self.article_search_uuid, self.request_url)
+        return '<Article Search {}: {}>'.format(self.article_search_uuid, self.search_url)
 
 
 class Customer(Base):
@@ -131,7 +133,8 @@ class ArticleSearchResult(Base):
     __tablename__ = "article_search_results"
     __table_args__ = {"schema": schema}
 
-    search_uuid = Column(UUID, ForeignKey(schema + ".article_searches.article_search_uuid"), primary_key=True, nullable=False)
+    search_uuid = Column(UUID, ForeignKey(schema + ".article_searches.article_search_uuid"), primary_key=True,
+                         nullable=False)
     article_uuid = Column(UUID, ForeignKey(schema + ".articles.article_uuid"), primary_key=True, nullable=False)
     distance = Column(Float)
 
@@ -140,3 +143,18 @@ class ArticleSearchResult(Base):
 
     def __repr__(self):
         return '<Article Search Result {}: {}>'.format(self.search_uuid, self.article_uuid)
+
+
+class InvalidEmail(Base):
+    """Invalid Email Requests."""
+    __tablename__ = "invalid_emails"
+    __table_args__ = {"schema": schema}
+
+    invalid_email_uuid = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False, unique=True)
+    customer_uuid = Column(UUID, ForeignKey(schema + ".customers.customer_uuid"), nullable=False)
+    status = Column(Text)
+
+    customer = relationship("Customer")
+
+    def __repr__(self):
+        return '<Invalid Email {}: {}>'.format(self.search_uuid, self.article_uuid)
