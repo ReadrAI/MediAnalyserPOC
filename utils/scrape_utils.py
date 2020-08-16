@@ -65,7 +65,7 @@ def getRootUrl(article_url):
 
 def getFileName(topic, source_name, page=None):
     return '../raw_data/' + source_name.lower().replace(" ", "") + '_' + \
-        datetime.now().strftime("%Y%m%d_%H%M") + '_' + topic + \
+        datetime.now().strftime("%Y%m%d_%H%M") + '_' + topic.lower().replace(" ", "-") + \
         ('' if page is None else ('_%d' % page)) + '.csv'
 
 
@@ -147,6 +147,7 @@ def __pipelineNYT(source_name, file_name, url, loadDisk=False, fetchSource=False
     if fetchSource:
         if verbose <= Verbose.INFO:
             print("Fetching", url)
+        # TODO upadate with pyhton lib: https://newsapi.org/docs/client-libraries/python
         r = requests.get(url=url, headers={"Accept": "application/json"})
         data = r.json()
         saveData(data, file_name)
@@ -216,7 +217,7 @@ def __fetchNewsAPI(content_type, url, verbose=Verbose.ERROR):
         response = requests.get(url % page)
         json_response = response.json()
         if json_response['status'] == 'ok':
-            if json_response[content_type][0] in content:
+            if len(json_response[content_type]) > 0 and json_response[content_type][0] in content:
                 if verbose <= Verbose.ERROR:
                     print("Loading twice the same content")
                 break
@@ -245,7 +246,7 @@ def __fetchNewsAPI(content_type, url, verbose=Verbose.ERROR):
     return content
 
 
-def pipelineAPINewsHeadline(loadDisk=False, fetchSource=False, verbose=Verbose.ERROR):
+def pipelineNewsAPIHeadline(loadDisk=False, fetchSource=False, verbose=Verbose.ERROR):
     source_name = 'NewsAPI'
     file_name = getFileName('headlines', source_name)
     url = ('http://newsapi.org/v2/top-headlines?'
@@ -255,11 +256,11 @@ def pipelineAPINewsHeadline(loadDisk=False, fetchSource=False, verbose=Verbose.E
            'country=us&'
            'sortBy=publishedAt&'
            'apiKey=e30a64cfe1734e6794bdab67106590fa')
-    return __pipelineAPINews(source_name, file_name, url=url, fetchSource=fetchSource, loadDisk=loadDisk,
+    return __pipelineNewsAPI(source_name, file_name, url=url, fetchSource=fetchSource, loadDisk=loadDisk,
                              verbose=verbose)
 
 
-def pipelineAPINewsTopic(topic, loadDisk=False, fetchSource=False, verbose=Verbose.ERROR):
+def pipelineNewsAPITopic(topic, loadDisk=False, fetchSource=False, verbose=Verbose.ERROR):
     source_name = 'NewsAPI'
     now = datetime.now()
     file_name = getFileName(topic, source_name)
@@ -272,12 +273,26 @@ def pipelineAPINewsTopic(topic, loadDisk=False, fetchSource=False, verbose=Verbo
            'language=en&'
            'sortBy=publishedAt&'
            'apiKey=e30a64cfe1734e6794bdab67106590fa')
-    return __pipelineAPINews(source_name, file_name, url=url, fetchSource=fetchSource, loadDisk=loadDisk,
+    return __pipelineNewsAPI(source_name, file_name, url=url, fetchSource=fetchSource, loadDisk=loadDisk,
                              verbose=verbose)
 
 
-def __pipelineAPINews(source_name, file_name, url=None, loadDisk=False, fetchSource=False, verbose=Verbose.ERROR):
-    source_name = 'NewsAPI'
+def pipelineNewsAPIArticle(title, source_name=None, loadDisk=False, fetchSource=False, verbose=Verbose.ERROR):
+    provider_name = 'NewsAPI'
+    file_name = getFileName(title, source_name)
+    url = ('https://newsapi.org/v2/everything?'
+           'q=' + title + '&' +
+           ('' if source_name is None else 'source=' + source_name.lower().replace(" ", "-") + '&') +
+           'pageSize=100&'
+           'page=%s&'
+           'language=en&'
+           'sortBy=publishedAt&'
+           'apiKey=e30a64cfe1734e6794bdab67106590fa')
+    return __pipelineNewsAPI(provider_name, file_name, url=url, fetchSource=fetchSource, loadDisk=loadDisk,
+                             verbose=verbose)
+
+
+def __pipelineNewsAPI(source_name, file_name, url=None, loadDisk=False, fetchSource=False, verbose=Verbose.ERROR):
     if fetchSource:
         data = __fetchNewsAPI(
             content_type="articles",
@@ -292,9 +307,11 @@ def __pipelineAPINews(source_name, file_name, url=None, loadDisk=False, fetchSou
 
 def __feedImporter(feed_data, source_uuid, verbose=Verbose.ERROR):
     if 'entries' not in feed_data:
-        raise ValueError("No entries in feed")
+        raise ValueError("No entries in feed for", source_uuid)
     if 'status' not in feed_data:
-        raise ValueError("No entries in feed")
+        if verbose <= Verbose.DEBUG:
+            print("No status in feed for %s" % source_uuid)
+        raise ValueError("No status in feed for %s" % source_uuid)
     count = 0
     for a in feed_data['entries']:
         try:
@@ -315,12 +332,19 @@ def __feedImporter(feed_data, source_uuid, verbose=Verbose.ERROR):
     return count
 
 
-def importAllFeeds():
+def importAllFeeds(verbose=Verbose.ERROR):
     n_imported = 0
     feeds = sql_utils.getDBSession().query(models.RSSFeed).all()
     for feed_i in feeds:
+        if verbose <= Verbose.DEBUG:
+            print("Parsing feed %s" % feed_i.feed_url)
         data = feedparser.parse(feed_i.feed_url)
-        count = __feedImporter(data, feed_i.source_uuid)
+        try:
+            count = __feedImporter(data, feed_i.source_uuid, verbose=verbose)
+        except ValueError as ve:
+            if verbose <= Verbose.ERROR:
+                print(ve)
+                print("Feed error at %s" % feed_i.feed_url)
         n_imported += count
     return n_imported
 
@@ -328,15 +352,15 @@ def importAllFeeds():
 def loadRoutine(verbose=Verbose.INFO):
     count = 0
     # RSS feeds
-    count += importAllFeeds()
+    count += importAllFeeds(verbose=verbose)
     # NYT
     count += pipelineNYTHeadlines(fetchSource=True, verbose=verbose)
     count += pipelineNYTNewsWire(fetchSource=True, verbose=verbose)
     # NewsAPI
-    count += pipelineAPINewsHeadline(fetchSource=True, verbose=verbose)
+    count += pipelineNewsAPIHeadline(fetchSource=True, verbose=verbose)
     for topic in [
             'people', 'fashion', 'politics', 'COVID', 'elections', 'sport', 'news', 'war', 'world', 'europe',
             'technology', 'science', 'movie', 'Trump', 'Biden', 'news', 'business', 'trade', 'stock', 'S&P500', 'tax',
             'jobs', 'trends', 'design', 'tv']:
-        count += pipelineAPINewsTopic(topic=topic, fetchSource=True, verbose=verbose)
+        count += pipelineNewsAPITopic(topic=topic, fetchSource=True, verbose=verbose)
     return count
