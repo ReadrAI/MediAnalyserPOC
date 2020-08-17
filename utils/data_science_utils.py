@@ -42,10 +42,11 @@ w2v_attributes = {
 
 
 class Models:
-    NEWS_DICT = 'NEWS_DICT'  #  news Dictionnary
-    W2V = 'W2V'  #  Word to vec
-    NEWS_VECT = 'NEWS_VECT'  #  news Vectors
-    KNN = 'KNN'  #  K Nearest Neighbour
+    NEWS_DICT = 'NEWS_DICT'  # News Dictionnary
+    NEWS_INDEX = 'NEWS_INDEX'  # News Index
+    W2V = 'W2V'  # Word to Vec
+    NEWS_VECT = 'NEWS_VECT'  # News Vectors
+    KNN = 'KNN'  # K Nearest Neighbour
 
 
 def setModel(w2v_model, data):
@@ -78,12 +79,13 @@ def createArticleDictionnary(schema=models.schema, attributes=list(w2v_attribute
                 news_dict[article_uuid][attribute_i] = cleanText(
                     article[attribute_i])
     setModel(Models.NEWS_DICT, news_dict)
+    setModel(Models.NEWS_INDEX, [k for k in news_dict.keys()])
 
 
 def createWord2VectorModel(attributes=list(w2v_attributes.keys())):
     news_dict = getModel(Models.NEWS_DICT)
     documents = []
-    for _, article in news_dict.items():
+    for article in news_dict.values():
         for attribute_i in attributes:
             if attribute_i in article:
                 documents.append(article[attribute_i].split())
@@ -147,3 +149,61 @@ def createNlpModel(attributes=list(w2v_attributes.keys()), schema=models.schema,
     createWord2VectorModel(attributes=attributes)
     createNewsVectors(attributes=attributes)
     createKNNModel(attributes=attributes)
+
+
+def getTextEmbedding(attribute, search_text, verbose=Verbose.ERROR):
+
+    news_vect = getModel(Models.NEWS_VECT)
+
+    embedding = np.zeros([w2v_size])
+    word_count = 0
+
+    for word in cleanText(search_text).split():
+        try:
+            index = news_vect[attribute]['tfidf_vectorizer'].get_feature_names().index(word)
+            weight = news_vect[attribute]['tfidf_vectorizer'].idf_[index]
+            vec = news_vect[attribute]['tfidf_embeddings'][index]
+            word_count += 1
+            embedding += vec * weight
+        except (ValueError, KeyError):
+            try:
+                embedding += getModel(Models.W2V).wv.get_vector(word)
+                word_count += 1
+            except KeyError:
+                if verbose <= Verbose.ERROR:
+                    print('Word not found:', word)
+
+    if word_count > 0:
+        return embedding / word_count
+    else:
+        return embedding
+
+
+def getSimilarArticlesFromText(search_text, attribute='title', nb_articles=10):
+    news_index = getModel(Models.NEWS_INDEX)
+    neighbours = getModel(Models.KNN)
+    embedding = getTextEmbedding(attribute, search_text)
+
+    neighbour_articles = neighbours[attribute].kneighbors(embedding.reshape(1, w2v_size), n_neighbors=nb_articles)
+    similar_articles = {}
+    for i, j in enumerate(neighbour_articles[1][0]):
+        similar_articles[news_index[j]] = {}
+        similar_articles[news_index[j]]['distance'] = neighbour_articles[0][0][i]
+    article_uuid = list(similar_articles.keys())
+    query = sql_utils.getDBSession().query(
+        models.Article.article_uuid,
+        models.Article.title,
+        models.Article.description,
+        models.Source.source_name,
+        models.Article.article_url
+    ).filter(
+        models.Article.article_uuid.in_(article_uuid)
+    ).join(
+        models.Source, models.Source.source_uuid == models.Article.source_uuid
+    )
+    similar_article_details = pd.read_sql(query.statement, query.session.bind)
+    similar_article_details['article_uuid'] = similar_article_details['article_uuid'].astype(str)
+    similar_articles_df = pd.DataFrame(similar_articles).T
+    similar_articles_df.index.rename('article_uuid', inplace=True)
+    similar_article_details = similar_article_details.set_index('article_uuid').join(similar_articles_df)
+    return similar_article_details.sort_values('distance').head(nb_articles)
