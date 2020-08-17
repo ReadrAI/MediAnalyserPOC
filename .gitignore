@@ -141,3 +141,5 @@ db_backup/*
 utils/scrape_drivers/*
 data_visualisation/credentials.json
 data_visualisation/token.pickle
+utils/wip.py
+google-cloud-sdk/*
