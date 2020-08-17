@@ -13,29 +13,65 @@ from utils import sql_utils
 from utils.verbose import Verbose
 
 
-def getDBUrl():
-    username = "jean"
-    password = ""
-    host = "127.0.0.1"
-    port = "5432"
-    database = "media"
-    return 'postgres://' + username + ':' + password + \
-        '@' + host + ':' + str(port) + '/' + database
+class Host:
+    class G_CLOUD:
+        name = "gcloud"
+        username = "postgres"  # "worker"
+        password = "H1Jos0fOziriMHxL"  # "letravailleurabondos"
+        host = "35.195.3.218"
+        port = "5432"
+        database = "media"
+        connection_name = "future-oasis-286707:europe-west1:media"
+
+        @classmethod
+        def createEngine(cls, connect_args):
+            connect_args["sslmode"] = "require"
+            connect_args["sslcert"] = "/Users/jean/.postgresql/postgresql.crt"
+            connect_args["sslkey"] = "/Users/jean/.postgresql/postgresql.key"
+            connect_args["sslrootcert"] = "/Users/jean/.postgresql/root.crt"
+            return sqlalchemy.create_engine(getDBURLFromHost(cls), connect_args=connect_args)
+
+    class LOCAL_JEAN:
+        name = "jean_localhost"
+        username = "jean"
+        password = ""
+        host = "127.0.0.1"
+        port = "5432"
+        database = "media"
+
+        @classmethod
+        def createEngine(cls, connect_args):
+            return sqlalchemy.create_engine(getDBURLFromHost(cls), connect_args=connect_args)
 
 
-def getEngine(schema=models.schema):
+def getDBUrl(username, password, database, host, port, params={}):
+    return 'postgres://' + username + ':' + password + '@' + host + ':' + str(port) + '/' + database
+
+
+def getDBURLFromHost(host):
+    username = host.username
+    password = host.password
+    host_address = host.host
+    port = host.port
+    database = host.database
+    return getDBUrl(username, password, database, host_address, port)
+
+
+def getEngine(host=Host.G_CLOUD, schema=models.schema, connect_args={}):
     global engines
     try:
         engines
     except (NameError, UnboundLocalError):
         engines = {}
-    if schema not in engines:
-        connectArgs = {}
+    if host.name not in engines:
+        engines[host.name] = {}
+    if schema not in engines[host.name]:
         if schema is not None:
-            connectArgs['options'] = '-csearch_path=' + schema
-        engines[schema] = sqlalchemy.create_engine(
-            getDBUrl(), connect_args=connectArgs)
-    return engines[schema]
+            if 'options' not in connect_args:
+                connect_args['options'] = ''
+            connect_args['options'] = connect_args['options'] + '-csearch_path=' + schema
+        engines[host.name][schema] = host.createEngine(connect_args)
+    return engines[host.name][schema]
 
 
 def getDBSession(schema=models.schema):

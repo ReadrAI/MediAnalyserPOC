@@ -91,3 +91,8 @@ https://towardsdatascience.com/tf-idf-explained-and-python-sklearn-implementatio
 https://realpython.com/python-send-email/
 https://blog.mailtrap.io/send-emails-with-gmail-api/
 https://developers.google.com/gmail/api/guides/push
+
+### Google Cloud Engine
+
+https://cloud.google.com/sql/docs/mysql/connect-app-engine-standard
+https://cloud.google.com/secret-manager/docs/overview
