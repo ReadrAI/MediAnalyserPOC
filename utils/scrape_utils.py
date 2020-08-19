@@ -2,6 +2,8 @@
 Util functions for scraping and html queries
 """
 
+import os
+from os.path import expanduser
 import time
 import json
 import requests
@@ -38,8 +40,9 @@ def getRootUrl(article_url):
 
 
 def getFileName(topic, source_name, page=None):
-    return '../raw_data/' + source_name.lower().replace(" ", "") + '_' + \
-        datetime.now().strftime("%Y%m%d_%H%M") + '_' + topic.lower().replace(" ", "-") + \
+    homeDir = expanduser("~")
+    return homeDir + os.sep + 'MediAnalyserPOC' + os.sep + 'raw_data' + os.sep + source_name.lower().replace(" ", "") \
+        + '_' + datetime.now().strftime("%Y%m%d_%H%M") + '_' + topic.lower().replace(" ", "-") + \
         ('' if page is None else ('_%d' % page)) + '.csv'
 
 
