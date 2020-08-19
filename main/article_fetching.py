@@ -1,3 +1,4 @@
+import pytz
 import datetime
 
 from utils import sql_utils
@@ -11,7 +12,7 @@ verbose = Verbose.WARNING
 
 print("==================================")
 print("Article Fetching Routine Started")
-print("Timestamp:", datetime.datetime.now().strftime("%Y.%m.%d %H:%M"))
+print("Timestamp:", datetime.datetime.now(tz=pytz.timezone('Europe/Brussels')).strftime("%Y.%m.%d %H:%M %Z"))
 print("Log level:", verbose)
 print("Host:", host.name)
 print("Schema:", schema)
