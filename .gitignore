@@ -143,3 +143,10 @@ data_visualisation/credentials.json
 data_visualisation/token.pickle
 utils/wip.py
 google-cloud-sdk/*
+
+# function dependencies
+gcloud_functions/*/utils
+gcloud_functions/*/cert
+
+# credentials
+credentials/
