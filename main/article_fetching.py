@@ -1,7 +1,4 @@
-import sys
 import datetime
-
-sys.path.append("./")
 
 from utils import sql_utils
 from utils import scrape_utils
@@ -12,10 +9,14 @@ host = sql_utils.Host.G_CLOUD_SSL
 schema = models.schema
 verbose = Verbose.WARNING
 
+print("==================================")
 print("Article Fetching Routine Started")
 print("Timestamp:", datetime.datetime.now().strftime("%Y.%m.%d %H:%M"))
 print("Log level:", verbose)
 print("Host:", host.name)
 print("Schema:", schema)
 
-scrape_utils.loadRoutine(host=host, schema=schema, verbose=verbose)
+count = scrape_utils.loadRoutine(host=host, schema=schema, verbose=verbose)
+print("Article count:", count)
+
+print("Article Fetching Routine Finished\n")

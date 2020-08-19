@@ -150,3 +150,6 @@ gcloud_functions/*/cert
 
 # credentials
 credentials/
+
+# logs
+main/*log*.txt
