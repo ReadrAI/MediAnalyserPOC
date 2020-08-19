@@ -13,7 +13,7 @@ import pandas as pd
 from sklearn.neighbors import NearestNeighbors
 from sklearn.feature_extraction.text import TfidfVectorizer
 
-from data_model import models
+from utils import models
 from utils import sql_utils
 from utils.verbose import Verbose
 
@@ -63,8 +63,10 @@ def cleanText(text, to_remove=['PUNCT', 'PRON', 'SYM', 'NUM', 'ADP']):
     return ' '.join([y.lemma_ for y in nlp(text.lower()) if not y.is_stop and y.pos_ not in to_remove])
 
 
-def createArticleDictionnary(schema=models.schema, attributes=list(w2v_attributes.keys()), verbose=Verbose.ERROR):
-    df = sql_utils.getRawArticles(schema=schema)
+def createArticleDictionnary(attributes=list(w2v_attributes.keys()), host=sql_utils.Host.G_CLOUD_SSL,
+                             schema=models.schema, verbose=Verbose.ERROR):
+    query = sql_utils.getRawArticlesQuery(host=host, schema=schema)
+    df = pd.read_sql(query.statement, query.session.bind)
     news_dict = {}
     progress = 0
     for i, article in df.iterrows():
@@ -79,7 +81,7 @@ def createArticleDictionnary(schema=models.schema, attributes=list(w2v_attribute
                 news_dict[article_uuid][attribute_i] = cleanText(
                     article[attribute_i])
     setModel(Models.NEWS_DICT, news_dict)
-    setModel(Models.NEWS_INDEX, [k for k in news_dict.keys()])
+    setModel(Models.NEWS_INDEX, list(news_dict.keys()))
 
 
 def createWord2VectorModel(attributes=list(w2v_attributes.keys())):
@@ -114,11 +116,6 @@ def createTFIDFModel(attribute, min_df=1, max_df=1., ngram_range=(1, 1)):
     result['tfidf_embeddings'] = [getWordVector(word, w2v_model)
                                   for word in result['tfidf_vectorizer'].get_feature_names()]
     result['news_vector'] = np.array(result['tfidf_weights'].todense() * result['tfidf_embeddings'])
-
-    # df = pd.DataFrame(
-    #     result['tfidf_weights'][0].T.todense(),
-    #     index=result['tfidf_vectorizer'].get_feature_names(),
-    #     columns=["tfidf_weight"])
     return result
 
 
@@ -144,8 +141,9 @@ def createKNNModel(attributes=list(w2v_attributes.keys()), neighbors=5):
     setModel(Models.KNN, neighbours)
 
 
-def createNlpModel(attributes=list(w2v_attributes.keys()), schema=models.schema, verbose=Verbose.ERROR):
-    createArticleDictionnary()
+def createNlpModel(attributes=list(w2v_attributes.keys()), schema=models.schema, host=sql_utils.Host.G_CLOUD_SSL,
+                   verbose=Verbose.ERROR):
+    createArticleDictionnary(host=host, schema=schema)
     createWord2VectorModel(attributes=attributes)
     createNewsVectors(attributes=attributes)
     createKNNModel(attributes=attributes)
@@ -179,7 +177,8 @@ def getTextEmbedding(attribute, search_text, verbose=Verbose.ERROR):
         return embedding
 
 
-def getSimilarArticlesFromText(search_text, attribute='title', nb_articles=10):
+def getSimilarArticlesFromText(search_text, attribute='title', nb_articles=10, schema=models.schema,
+                               host=sql_utils.Host.G_CLOUD_SSL):
     news_index = getModel(Models.NEWS_INDEX)
     neighbours = getModel(Models.KNN)
     embedding = getTextEmbedding(attribute, search_text)
@@ -190,7 +189,7 @@ def getSimilarArticlesFromText(search_text, attribute='title', nb_articles=10):
         similar_articles[news_index[j]] = {}
         similar_articles[news_index[j]]['distance'] = neighbour_articles[0][0][i]
     article_uuid = list(similar_articles.keys())
-    query = sql_utils.getDBSession().query(
+    query = sql_utils.getDBSession(host=host, schema=schema).query(
         models.Article.article_uuid,
         models.Article.title,
         models.Article.description,

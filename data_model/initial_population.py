@@ -1,5 +1,5 @@
 from utils import sql_utils
-from data_model import models
+from utils import models
 
 # Missing Sources
 missing_sources = {

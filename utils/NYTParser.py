@@ -1,4 +1,31 @@
 from html.parser import HTMLParser
+from selenium.webdriver import Chrome
+
+webdriver_path = './scrape_drivers/chromedriver_v84'
+
+
+def getDriver():
+    global driver
+    try:
+        driver
+    except (NameError, UnboundLocalError):
+        driver = Chrome(webdriver_path)
+        driver.get("https://www.google.com/")
+    return driver
+
+
+def __fetchPage(driver, url):
+    driver.get(url)
+    html_page = driver.page_source
+    return html_page
+
+
+def getNYTArticleContent(url, driver):
+    html_content = __fetchPage(driver, url)
+    parser = NYTParser()
+    parser.feed(html_content)
+    return parser.getText()
+
 
 """
 Extracts the text from New York Times raw html text

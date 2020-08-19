@@ -20,7 +20,7 @@ from utils import article_search_utils
 from utils import data_science_utils
 from utils import scrape_utils
 from utils.verbose import Verbose
-from data_model import models
+from utils import models
 
 
 # If modifying these scopes, delete the file token.pickle.
