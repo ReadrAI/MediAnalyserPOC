@@ -3,6 +3,7 @@ Util functions for postgres connections and sql
 """
 
 import os
+from os.path import expanduser
 import psycopg2
 import sqlalchemy
 from sqlalchemy.orm import sessionmaker
@@ -22,10 +23,11 @@ class Host:
 
         @classmethod
         def createEngine(cls, connect_args):
+            homeDir = expanduser("~")
             connect_args["sslmode"] = "require"
-            connect_args["sslcert"] = "/Users/jean/.postgresql/postgresql.crt"
-            connect_args["sslkey"] = "/Users/jean/.postgresql/postgresql.key"
-            connect_args["sslrootcert"] = "/Users/jean/.postgresql/root.crt"
+            connect_args["sslcert"] = homeDir + os.sep + ".postgresql/postgresql.crt"
+            connect_args["sslkey"] = homeDir + os.sep + ".postgresql/postgresql.key"
+            connect_args["sslrootcert"] = homeDir + os.sep + ".postgresql/root.crt"
             return sqlalchemy.create_engine(getDBURLFromHost(cls), connect_args=connect_args)
 
     class G_CLOUD_FUNCTION:

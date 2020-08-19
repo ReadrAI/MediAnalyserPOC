@@ -18,8 +18,6 @@ def hello_pubsub(event, context):
     host = sql_utils.Host.G_CLOUD_FUNCTION
 
     try:
-        c_i = sql_utils.getCustomerID("jean.haizmann@gmail.com", host=host)
-        print("Customer ID %s" % c_i)
         scrape_utils.loadRoutine(host=host, verbose=Verbose.WARNING)
 
     except BaseException as e:
