@@ -46,7 +46,7 @@ def getFileName(topic, source_name, page=None):
         ('' if page is None else ('_%d' % page)) + '.csv'
 
 
-def importNYT(data, source_name, host=sql_utils.Host.G_CLOUD_SSL, verbose=Verbose.ERROR):
+def importNYT(data, source_name, schema=models.schema, host=sql_utils.Host.G_CLOUD_SSL, verbose=Verbose.ERROR):
     count = 0
     if data['status'] == 'OK' and data['results'] is not None:
         if verbose <= Verbose.WARNING and len(data['results']) != data['num_results']:
@@ -54,7 +54,7 @@ def importNYT(data, source_name, host=sql_utils.Host.G_CLOUD_SSL, verbose=Verbos
                   len(data['results']), data['num_results'])
         for i in range(len(data['results'])):
             article = data['results'][i]
-            source_uuid = sql_utils.getSourceID(source_name, host=host)
+            source_uuid = sql_utils.getSourceID(source_name, schema=schema, host=host)
             if source_uuid is None:
                 if verbose <= Verbose.ERROR:
                     print("Source Not Found:", source_name)
@@ -68,7 +68,7 @@ def importNYT(data, source_name, host=sql_utils.Host.G_CLOUD_SSL, verbose=Verbos
                 authors=[article['byline']],
                 published_at=article['published_date'],
                 updated_at=article['updated_date']
-            ), host=host)
+            ), schema=schema, host=host)
     else:
         if verbose <= Verbose.ERROR:
             print("Data error:", data['status']
@@ -81,9 +81,10 @@ def getNYTSections(api_key):
     return requests.get(url=url, params={}).json()
 
 
-def pipelineNYTHeadlines(loadDisk=False, fetchSource=False, host=sql_utils.Host.G_CLOUD_SSL, verbose=Verbose.ERROR):
+def pipelineNYTHeadlines(loadDisk=False, fetchSource=False, schema=models.schema, host=sql_utils.Host.G_CLOUD_SSL, 
+                         verbose=Verbose.ERROR):
     source_name = 'New York Times'
-    source = sql_utils.getSource(source_name, host=host)
+    source = sql_utils.getSource(source_name, schema=schema, host=host)
     sections = [
         'arts', 'automobiles', 'books', 'business', 'fashion', 'food', 'health', 'home',
         'insider', 'magazine', 'movies', 'nyregion', 'obituaries', 'opinion', 'politics',
@@ -97,25 +98,25 @@ def pipelineNYTHeadlines(loadDisk=False, fetchSource=False, host=sql_utils.Host.
         # source.api_url.replace("API_KEY", source.api_key)
         file_name = getFileName(topic, source_name)
         count += __pipelineNYT(source_name, file_name, url, loadDisk=loadDisk,
-                               fetchSource=fetchSource, host=host, verbose=verbose)
+                               fetchSource=fetchSource, schema=schema, host=host, verbose=verbose)
     return count
 
 
-def pipelineNYTNewsWire(startPage=0, loadDisk=False, fetchSource=False, host=sql_utils.Host.G_CLOUD_SSL,
-                        verbose=Verbose.ERROR):
+def pipelineNYTNewsWire(startPage=0, loadDisk=False, fetchSource=False, schema=models.schema, 
+                        host=sql_utils.Host.G_CLOUD_SSL, verbose=Verbose.ERROR):
     source_name = 'New York Times'
-    source = sql_utils.getSource(source_name, host=host)
+    source = sql_utils.getSource(source_name, schema=schema, host=host)
     increment = 500  # conditions: 20 <= increment <= 500; increment % 20 == 0
     page = startPage
     file_name = getFileName('newswire', source_name, page)
     url = "https://api.nytimes.com/svc/news/v3/content/all/all.json?limit=%d&offset=%d&api-key=%s" % (
         increment, page * increment, source.api_key)
     return __pipelineNYT(source_name, file_name, url, loadDisk=loadDisk,
-                         fetchSource=fetchSource, host=host, verbose=verbose)
+                         fetchSource=fetchSource, schema=schema, host=host, verbose=verbose)
 
 
-def __pipelineNYT(source_name, file_name, url, loadDisk=False, fetchSource=False, host=sql_utils.Host.G_CLOUD_SSL,
-                  verbose=Verbose.ERROR):
+def __pipelineNYT(source_name, file_name, url, loadDisk=False, fetchSource=False, schema=models.schema,
+                  host=sql_utils.Host.G_CLOUD_SSL, verbose=Verbose.ERROR):
     if fetchSource:
         if verbose <= Verbose.INFO:
             print("Fetching", url)
@@ -126,22 +127,23 @@ def __pipelineNYT(source_name, file_name, url, loadDisk=False, fetchSource=False
         time.sleep(10)
     if loadDisk:
         data = loadData(file_name)
-    return importNYT(data, source_name, host=host, verbose=verbose)
+    return importNYT(data, source_name, schema=schema, host=host, verbose=verbose)
 
 
-def importNewsAPIArticles(articles, source_name, host=sql_utils.Host.G_CLOUD_SSL, verbose=Verbose.ERROR):
-    provider_uuid = str(sql_utils.getSource(source_name, host=host).source_uuid)
+def importNewsAPIArticles(articles, source_name, schema=models.schema, host=sql_utils.Host.G_CLOUD_SSL,
+                          verbose=Verbose.ERROR):
+    provider_uuid = str(sql_utils.getSource(source_name, schema=schema, host=host).source_uuid)
     count = 0
     for i, a in articles.iterrows():
         source_name = a['source']['name']
-        source = sql_utils.getSource(source_name, host=host)
+        source = sql_utils.getSource(source_name, schema=schema, host=host)
         if source is None:
             source_url = getRootUrl(a['url'])
             sql_utils.insertEntry(models.Source(
                 source_name=source_name,
                 website_url=source_url
-            ), host=host)
-            source = sql_utils.getSource(source_name, host=host)
+            ), schema=schema, host=host)
+            source = sql_utils.getSource(source_name, schema=schema, host=host)
         source_uuid = str(source.source_uuid)
         count += sql_utils.insertEntry(models.Article(
             article_url=a['url'],
@@ -151,19 +153,19 @@ def importNewsAPIArticles(articles, source_name, host=sql_utils.Host.G_CLOUD_SSL
             description=a['description'],
             published_at=a['publishedAt'],
             authors=[a['author']]
-        ), host=host)
+        ), schema=schema, host=host)
         if a['content'] is not None:
-            article = sql_utils.getDBSession(host=host).query(models.Article).filter(
+            article = sql_utils.getDBSession(schema=schema, host=host).query(models.Article).filter(
                 models.Article.article_url == a['url']).first()
             if article is not None:
                 sql_utils.insertEntry(models.ArticleContent(
                     article_uuid=str(article.article_uuid),
                     article_content=a['content']
-                ), host=host)
+                ), schema=schema, host=host)
     return count
 
 
-def importNewsAPISources(host=sql_utils.Host.G_CLOUD_SSL, verbose=Verbose.ERROR):
+def importNewsAPISources(schema=models.schema, host=sql_utils.Host.G_CLOUD_SSL, verbose=Verbose.ERROR):
     sources = __fetchNewsAPI(
         content_type="sources",
         url="https://newsapi.org/v2/sources?language=en&apiKey=e30a64cfe1734e6794bdab67106590fa",
@@ -174,7 +176,7 @@ def importNewsAPISources(host=sql_utils.Host.G_CLOUD_SSL, verbose=Verbose.ERROR)
             country=s['country'],
             website_url=s['url'],
             aliases=[s['id']]
-        ), host=host)
+        ), schema=schema, host=host)
     return sources
 
 
@@ -216,7 +218,8 @@ def __fetchNewsAPI(content_type, url, verbose=Verbose.ERROR):
     return content
 
 
-def pipelineNewsAPIHeadline(loadDisk=False, fetchSource=False, host=sql_utils.Host.G_CLOUD_SSL, verbose=Verbose.ERROR):
+def pipelineNewsAPIHeadline(loadDisk=False, fetchSource=False, schema=models.schema, host=sql_utils.Host.G_CLOUD_SSL,
+                            verbose=Verbose.ERROR):
     source_name = 'NewsAPI'
     file_name = getFileName('headlines', source_name)
     url = ('http://newsapi.org/v2/top-headlines?'
@@ -227,11 +230,11 @@ def pipelineNewsAPIHeadline(loadDisk=False, fetchSource=False, host=sql_utils.Ho
            'sortBy=publishedAt&'
            'apiKey=e30a64cfe1734e6794bdab67106590fa')
     return __pipelineNewsAPI(source_name, file_name, url=url, fetchSource=fetchSource, loadDisk=loadDisk,
-                             host=host, verbose=verbose)
+                             schema=schema, host=host, verbose=verbose)
 
 
 def pipelineNewsAPITopic(topic, loadDisk=False, fetchSource=False, host=sql_utils.Host.G_CLOUD_SSL,
-                         verbose=Verbose.ERROR):
+                         schema=models.schema, verbose=Verbose.ERROR):
     source_name = 'NewsAPI'
     now = datetime.now()
     file_name = getFileName(topic, source_name)
@@ -245,11 +248,11 @@ def pipelineNewsAPITopic(topic, loadDisk=False, fetchSource=False, host=sql_util
            'sortBy=publishedAt&'
            'apiKey=e30a64cfe1734e6794bdab67106590fa')
     return __pipelineNewsAPI(source_name, file_name, url=url, fetchSource=fetchSource, loadDisk=loadDisk,
-                             host=host, verbose=verbose)
+                             schema=schema, host=host, verbose=verbose)
 
 
-def pipelineNewsAPIArticle(title, source_name=None, loadDisk=False, fetchSource=False, host=sql_utils.Host.G_CLOUD_SSL,
-                           verbose=Verbose.ERROR):
+def pipelineNewsAPIArticle(title, source_name=None, loadDisk=False, fetchSource=False, schema=models.schema,
+                           host=sql_utils.Host.G_CLOUD_SSL, verbose=Verbose.ERROR):
     provider_name = 'NewsAPI'
     file_name = getFileName(title, source_name)
     url = ('https://newsapi.org/v2/everything?'
@@ -261,21 +264,22 @@ def pipelineNewsAPIArticle(title, source_name=None, loadDisk=False, fetchSource=
            'sortBy=publishedAt&'
            'apiKey=e30a64cfe1734e6794bdab67106590fa')
     return __pipelineNewsAPI(provider_name, file_name, url=url, fetchSource=fetchSource, loadDisk=loadDisk,
-                             host=host, verbose=verbose)
+                             schema=schema, host=host, verbose=verbose)
 
 
 def __pipelineNewsAPI(source_name, file_name, url=None, loadDisk=False, fetchSource=False,
-                      host=sql_utils.Host.G_CLOUD_SSL, verbose=Verbose.ERROR):
+                      schema=models.schema, host=sql_utils.Host.G_CLOUD_SSL, verbose=Verbose.ERROR):
     if fetchSource:
         data = __fetchNewsAPI(content_type="articles", url=url, verbose=verbose)
         articles = pd.DataFrame(data)
         articles.to_csv(file_name)
     if loadDisk:
         articles = pd.read_csv(file_name)
-    return importNewsAPIArticles(articles, source_name, host=host, verbose=verbose)
+    return importNewsAPIArticles(articles, source_name, schema=schema, host=host, verbose=verbose)
 
 
-def __feedImporter(feed_data, source_uuid, host=sql_utils.Host.G_CLOUD_SSL, verbose=Verbose.ERROR):
+def __feedImporter(feed_data, source_uuid, schema=models.schema, host=sql_utils.Host.G_CLOUD_SSL,
+                   verbose=Verbose.ERROR):
     if 'entries' not in feed_data:
         raise ValueError("No entries in feed for", source_uuid)
     if 'status' not in feed_data:
@@ -295,22 +299,22 @@ def __feedImporter(feed_data, source_uuid, host=sql_utils.Host.G_CLOUD_SSL, verb
                     a['published'] if ('published' in a and a['published'] != '' and a['published'] is not None)
                     else datetime.utcnow()),
                 authors=([a['author']] if 'author' in a else [''])
-            ), host=host)
+            ), schema=schema, host=host)
         except KeyError:
             if verbose <= Verbose.ERROR:
                 print("Key Error for source", source_uuid, a.keys(), a['link'])
     return count
 
 
-def importAllFeeds(host=sql_utils.Host.G_CLOUD_SSL, verbose=Verbose.ERROR):
+def importAllFeeds(schema=models.schema, host=sql_utils.Host.G_CLOUD_SSL, verbose=Verbose.ERROR):
     n_imported = 0
-    feeds = sql_utils.getDBSession(host=host).query(models.RSSFeed).all()
+    feeds = sql_utils.getDBSession(schema=schema, host=host).query(models.RSSFeed).all()
     for feed_i in feeds:
         if verbose <= Verbose.DEBUG:
             print("Parsing feed %s" % feed_i.feed_url)
         data = feedparser.parse(feed_i.feed_url)
         try:
-            count = __feedImporter(data, feed_i.source_uuid, host=host, verbose=verbose)
+            count = __feedImporter(data, feed_i.source_uuid, schema=models.schema, host=host, verbose=verbose)
         except ValueError as ve:
             if verbose <= Verbose.ERROR:
                 print(ve)
@@ -319,18 +323,18 @@ def importAllFeeds(host=sql_utils.Host.G_CLOUD_SSL, verbose=Verbose.ERROR):
     return n_imported
 
 
-def loadRoutine(host=sql_utils.Host.G_CLOUD_SSL, verbose=Verbose.INFO):
+def loadRoutine(schema=models.schema, host=sql_utils.Host.G_CLOUD_SSL, verbose=Verbose.INFO):
     count = 0
     # RSS feeds
-    count += importAllFeeds(host=host, verbose=verbose)
+    count += importAllFeeds(schema=schema, host=host, verbose=verbose)
     # NYT
-    count += pipelineNYTHeadlines(fetchSource=True, host=host, verbose=verbose)
-    count += pipelineNYTNewsWire(fetchSource=True, host=host, verbose=verbose)
+    count += pipelineNYTHeadlines(fetchSource=True, schema=schema, host=host, verbose=verbose)
+    count += pipelineNYTNewsWire(fetchSource=True, schema=schema, host=host, verbose=verbose)
     # NewsAPI
-    count += pipelineNewsAPIHeadline(fetchSource=True, host=host, verbose=verbose)
+    count += pipelineNewsAPIHeadline(fetchSource=True, schema=schema, host=host, verbose=verbose)
     for topic in [
             'people', 'fashion', 'politics', 'COVID', 'elections', 'sport', 'news', 'war', 'world', 'europe',
             'technology', 'science', 'movie', 'Trump', 'Biden', 'news', 'business', 'trade', 'stock', 'S&P500', 'tax',
             'jobs', 'trends', 'design', 'tv']:
-        count += pipelineNewsAPITopic(topic=topic, fetchSource=True, host=host, verbose=verbose)
+        count += pipelineNewsAPITopic(topic=topic, fetchSource=True, schema=schema, host=host, verbose=verbose)
     return count
