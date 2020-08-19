@@ -15,7 +15,7 @@ def hello_pubsub(event, context):
     from utils import scrape_utils
     from utils.verbose import Verbose
 
-    host = sql_utils.Host.G_CLOUD_UNIX
+    host = sql_utils.Host.G_CLOUD_FUNCTION
 
     try:
         c_i = sql_utils.getCustomerID("jean.haizmann@gmail.com", host=host)

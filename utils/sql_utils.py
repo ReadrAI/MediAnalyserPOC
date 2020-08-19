@@ -28,10 +28,10 @@ class Host:
             connect_args["sslrootcert"] = "/Users/jean/.postgresql/root.crt"
             return sqlalchemy.create_engine(getDBURLFromHost(cls), connect_args=connect_args)
 
-    class G_CLOUD_UNIX:
-        name = "gcloud_unix"
-        username = "postgres"  # "worker"
-        password = "H1Jos0fOziriMHxL"  # "letravailleurabondos"
+    class G_CLOUD_FUNCTION:
+        name = "gcloud_function"
+        username = "worker"
+        password = "letravailleurabondos"
         host = "35.195.3.218"
         port = "5432"
         database = "media"
