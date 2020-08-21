@@ -51,8 +51,8 @@ def __createGmailService():
     # created automatically when the authorization flow completes for the first
     # time.
     modulePath = getModulePath()
-    tokenPath = modulePath + os.sep + 'credentials' + os.sep + 'token.pickle'
-    credentialPath = modulePath + os.sep + 'credentials' + os.sep + 'credentials.json'
+    tokenPath = modulePath + os.sep + 'credentials' + os.sep + 'newshorizonmail_token.pickle'
+    credentialPath = modulePath + os.sep + 'credentials' + os.sep + 'newshorizonmail_credentials.json'
     if os.path.exists(tokenPath):
         with open(tokenPath, 'rb') as token:
             creds = pickle.load(token)
