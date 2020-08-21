@@ -5,7 +5,7 @@ Machine Learning models creation and usage function
 import plotly
 import pickle
 import gensim
-import en_core_web_sm
+import spacy
 
 import numpy as np
 import pandas as pd
@@ -17,12 +17,7 @@ from utils import models
 from utils import sql_utils
 from utils.verbose import Verbose
 
-nlp = en_core_web_sm.load()
-
-pd.set_option('display.max_rows', None)
-pd.set_option('display.max_columns', None)
-pd.set_option('display.width', None)
-pd.set_option('display.max_colwidth', None)
+nlp = spacy.load('en_core_web_sm')
 
 plotly.offline.init_notebook_mode(connected=True)
 
