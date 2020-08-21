@@ -349,4 +349,7 @@ def pipelineEmails(verbose=Verbose.ERROR):
                 ))
             else:
                 request_emails.append(values)
-    answer_emails(request_emails, verbose=verbose)
+    count = answer_emails(request_emails, verbose=verbose)
+    if verbose <= Verbose.INFO:
+        print("Answered Email Count:", count)
+    return count
