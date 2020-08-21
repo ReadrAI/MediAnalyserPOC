@@ -12,7 +12,7 @@ app = Flask(__name__)
 
 @app.route("/")
 def hello():
-    thread = threading.Thread(target=mail_utils.pipelineEmails, args=(Verbose.INFO))
+    thread = threading.Thread(target=mail_utils.pipelineEmails, args=[Verbose.INFO])
     thread.start()
     now = datetime.datetime.now(tz=pytz.timezone('Europe/Brussels')).strftime("%Y.%m.%d %H:%M %Z")
     print("Email Request: Loading new emails", now)
