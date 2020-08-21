@@ -215,23 +215,28 @@ def downloadArticle(article_search, verbose=Verbose.ERROR):
         if len(sources) == 1:
             source = sources[0]
         else:
-            path_elements = urlparse(article_search.search_url).path.split('/')
-            sources = getSourceFromUrl(article_search.search_url)
+            if verbose <= Verbose.ERROR:
+                print('FAILURE: Source domain not found', article_search.article_search_uuid)
+            return None
+            # Code not functional. TODO fix and add back
 
-            print(path_elements)
-            for element in path_elements:
-                if element != '':
-                    print(sources)
-                    sources = [s for s in sources if element in s.website_url]
-                    if len(sources) <= 1:
-                        break
-            if len(sources) == 0:  # eliminated too many sources, should not happen
-                sql_utils.updateSearchStatus(article_search.article_search_uuid, 'FAILURE: Source domain not found')
-                if verbose <= Verbose.ERROR:
-                    print('FAILURE: Source domain not found', article_search.article_search_uuid)
-                return None
-            else:
-                source = sources[0]
+            # path_elements = urlparse(article_search.search_url).path.split('/')
+            # sources = getSourceFromUrl(article_search.search_url)
+
+            # print(path_elements)
+            # for element in path_elements:
+            #     if element != '':
+            #         print(sources)
+            #         sources = [s for s in sources if element in s.website_url]
+            #         if len(sources) <= 1:
+            #             break
+            # if len(sources) == 0:  # eliminated too many sources, should not happen
+            #     sql_utils.updateSearchStatus(article_search.article_search_uuid, 'FAILURE: Source domain not found')
+            #     if verbose <= Verbose.ERROR:
+            #         print('FAILURE: Source domain not found', article_search.article_search_uuid)
+            #     return None
+            # else:
+            #     source = sources[0]
         # TODO add TF-IDF weights on key-words to select most frequent/relevant
         search_elements = article_search.search_url.split('/')[-1]
         if '.' in search_elements:
