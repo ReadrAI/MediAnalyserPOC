@@ -270,7 +270,7 @@ def answer_emails(request_emails, verbose=Verbose.ERROR):
             if verbose <= Verbose.ERROR:
                 print("No URL found for message %s: %s\n %s\n" % (
                         request_i['id'], request_i['subject'], request_i['content']))
-            success = sql_utils.insertEntry(models.ArticleSearch(
+            sql_utils.insertEntry(models.ArticleSearch(
                 gmail_request_uuid=request_i['id'],
                 customer_uuid=customer_uuid,
                 status='FAILURE: missing URL'
@@ -287,12 +287,13 @@ def answer_emails(request_emails, verbose=Verbose.ERROR):
             continue
         else:
             article_search = sql_utils.getSearch(request_i['id'])
-            print(article_search)
-            print(article_search.search_url)
-            print(str(article_search.search_url))
+            # print(article_search)
+            # print(article_search.search_url)
+            # print(str(article_search.search_url))
             search_article = sql_utils.getArticle(article_search.search_url)
             if search_article is None:
-                search_article = downloadArticle(article_search, verbose=verbose)
+                # broken code, add when fixed
+                # search_article = downloadArticle(article_search, verbose=verbose)
                 if search_article is None:
                     if verbose <= Verbose.ERROR:
                         print('FAILURE: Article not found', article_search.article_search_uuid)
