@@ -8,7 +8,6 @@ import pickle
 import base64
 import email
 import os.path
-from urllib.parse import urlparse
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from googleapiclient.discovery import build
@@ -199,13 +198,8 @@ def parse_email(email_tag):
         return email_tag
 
 
-def getSourceFromUrl(url):
-    stem = urlparse(url).netloc.split('.')[-2]
-    return sql_utils.getDBSession().query(models.Source).filter(models.Source.website_url.contains(stem)).all()
-
-
 def downloadArticle(article_search, verbose=Verbose.ERROR):
-    sources = getSourceFromUrl(article_search.search_url)
+    sources = sql_utils.getSourceFromUrl(article_search.search_url, verbose=verbose)
     if len(sources) == 0:
         if verbose <= Verbose.ERROR:
             print('FAILURE: Source not found', article_search.article_search_uuid)

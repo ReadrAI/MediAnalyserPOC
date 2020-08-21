@@ -7,6 +7,7 @@ from os.path import expanduser
 import psycopg2
 import sqlalchemy
 from sqlalchemy.orm import sessionmaker
+from urllib.parse import urlparse
 
 from utils import models
 from utils.verbose import Verbose
@@ -75,6 +76,7 @@ def getDBURLFromHost(host):
     return getDBUrl(username, password, database, host_address, port)
 
 
+# This function should not be called outside of sql_utils.
 def getEngine(host=Host.G_CLOUD_SSL, schema=models.schema, connect_args={}):
     global engines
     try:
@@ -92,6 +94,7 @@ def getEngine(host=Host.G_CLOUD_SSL, schema=models.schema, connect_args={}):
     return engines[host.name][schema]
 
 
+# This function should not be called outside of sql_utils.
 def getDBSession(host=Host.G_CLOUD_SSL, schema=models.schema):
     global sessions
     try:
@@ -126,6 +129,27 @@ def getSource(name, host=Host.G_CLOUD_SSL, schema=models.schema, verbose=Verbose
         if verbose <= Verbose.WARNING:
             print("Warning: multiple sources matching name", name)
             print("Possible matches", [x['source_name'] for x in sources])
+    elif len(sources) == 0:
+        return None
+    return sources[0]
+
+
+def getSourceFromUrl(url, host=Host.G_CLOUD_SSL, schema=models.schema, verbose=Verbose.ERROR):
+
+    def getStem(to_stem):
+        return urlparse(to_stem).netloc.split('.')[-2]
+
+    stem = urlparse(url).netloc.split('.')[-2]
+    sources = getDBSession(host=host, schema=schema).query(models.Source)\
+        .filter(models.Source.website_url.contains(stem)).all()
+    if len(sources) > 1:
+        for source_i in sources:
+            if getStem(source_i.source_url) == stem and stem != '':
+                return source_i
+        if verbose <= Verbose.WARNING:
+            print("Warning: multiple sources matching url", url)
+            print("Possible matches", [x['source_name'] for x in sources])
+        return sources[0]
     elif len(sources) == 0:
         return None
     return sources[0]
