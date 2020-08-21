@@ -110,7 +110,7 @@ def createTFIDFModel(attribute, min_df=1, max_df=1., ngram_range=(1, 1)):
     w2v_model = getModel(Models.W2V)
 
     result = {}
-    result['documents'] = [(v[attribute]) for v in news_dict.values()]
+    result['documents'] = [(v[attribute]) for v in news_dict.values() if attribute in v]
     result['tfidf_vectorizer'] = TfidfVectorizer(stop_words=None, min_df=min_df, max_df=max_df, ngram_range=ngram_range)
     result['tfidf_weights'] = result['tfidf_vectorizer'].fit_transform(result['documents'])
     result['tfidf_embeddings'] = [getWordVector(word, w2v_model)
@@ -141,15 +141,15 @@ def createKNNModel(attributes=list(w2v_attributes.keys()), neighbors=5):
     setModel(Models.KNN, neighbours)
 
 
-def createNlpModel(attributes=list(w2v_attributes.keys()), schema=models.schema, host=sql_utils.Host.G_CLOUD_SSL,
-                   verbose=Verbose.ERROR):
+def createNlpModels(attributes=list(w2v_attributes.keys()), schema=models.schema, host=sql_utils.Host.G_CLOUD_SSL,
+                    verbose=Verbose.ERROR):
     createArticleDictionnary(host=host, schema=schema)
     createWord2VectorModel(attributes=attributes)
     createNewsVectors(attributes=attributes)
     createKNNModel(attributes=attributes)
 
 
-def getTextEmbedding(attribute, search_text, verbose=Verbose.ERROR):
+def getTextEmbedding(search_text, attribute, verbose=Verbose.ERROR):
 
     news_vect = getModel(Models.NEWS_VECT)
 
@@ -181,7 +181,7 @@ def getSimilarArticlesFromText(search_text, attribute='title', nb_articles=10, s
                                host=sql_utils.Host.G_CLOUD_SSL):
     news_index = getModel(Models.NEWS_INDEX)
     neighbours = getModel(Models.KNN)
-    embedding = getTextEmbedding(attribute, search_text)
+    embedding = getTextEmbedding(search_text, attribute)
 
     neighbour_articles = neighbours[attribute].kneighbors(embedding.reshape(1, w2v_size), n_neighbors=nb_articles)
     similar_articles = {}
