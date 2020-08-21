@@ -38,13 +38,23 @@ def getGmailService():
     return service
 
 
+def getModulePath():
+    for root, subdirs, files in os.walk(os.path.expanduser("~")):
+        for sd in subdirs:
+            if sd == "MediAnalyserPOC":
+                return root + os.sep + sd
+
+
 def __createGmailService():
     creds = None
     # The file token.pickle stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first
     # time.
-    if os.path.exists('token.pickle'):
-        with open('token.pickle', 'rb') as token:
+    modulePath = getModulePath()
+    tokenPath = modulePath + os.sep + 'credentials' + os.sep + 'token.pickle'
+    credentialPath = modulePath + os.sep + 'credentials' + os.sep + 'credentials.json'
+    if os.path.exists(tokenPath):
+        with open(tokenPath, 'rb') as token:
             creds = pickle.load(token)
     # If there are no (valid) credentials available, let the user log in.
     if not creds or not creds.valid:
@@ -52,10 +62,10 @@ def __createGmailService():
             creds.refresh(Request())
         else:
             flow = InstalledAppFlow.from_client_secrets_file(
-                'credentials.json', SCOPES)
+                credentialPath, SCOPES)
             creds = flow.run_local_server(port=0)
         # Save the credentials for the next run
-        with open('token.pickle', 'wb') as token:
+        with open(tokenPath, 'wb') as token:
             pickle.dump(creds, token)
 
     service = build('gmail', 'v1', credentials=creds)
