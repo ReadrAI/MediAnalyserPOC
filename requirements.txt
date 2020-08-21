@@ -13,3 +13,5 @@ scikit-learn
 google-api-python-client
 selenium
 flask
+google-auth-httplib2
+google-auth-oauthlib
