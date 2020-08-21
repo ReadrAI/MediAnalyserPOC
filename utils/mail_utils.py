@@ -16,7 +16,6 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 
 from utils import sql_utils
-from utils import article_search_utils
 from utils import data_science_utils
 from utils import scrape_utils
 from utils.verbose import Verbose
@@ -247,61 +246,69 @@ def downloadArticle(article_search, verbose=Verbose.ERROR):
 
 
 def answer_emails(request_emails, verbose=Verbose.ERROR):
-    past_requests = sql_utils.getSearchMailIDs()
+    count = 0
     for request_i in request_emails:
-        if request_i['id'] not in past_requests:
-            if verbose <= Verbose.INFO:
-                print("Processing request", request_i['id'])
-            status = ''
-            requester_email = parse_email(request_i['from'])
-            customer_uuid = sql_utils.getOrSetCustomerID(requester_email)
-            search_url = getUrlFromText(request_i['subject'])
-            if search_url == '':
-                search_url = getUrlFromText(request_i['content'])
-            if search_url == '':
-                if verbose <= Verbose.ERROR:
-                    print("No URL found for message %s: %s\n %s\n" % (
-                          request_i['id'], request_i['subject'], request_i['content']))
-                status = 'FAILURE: URL missing'
+        if verbose <= Verbose.INFO:
+            print("Processing request", request_i['id'])
+            print("Subject:", request_i['subject'])
+            print("Content:", request_i['content'])
+        requester_email = parse_email(request_i['from'])
+        customer_uuid = sql_utils.getOrSetCustomerID(requester_email)
+        search_url = getUrlFromText(request_i['subject'])
+        if search_url is None:
+            search_url = getUrlFromText(request_i['content'])
+        if search_url is None:
+            if verbose <= Verbose.ERROR:
+                print("No URL found for message %s: %s\n %s\n" % (
+                        request_i['id'], request_i['subject'], request_i['content']))
             success = sql_utils.insertEntry(models.ArticleSearch(
                 gmail_request_uuid=request_i['id'],
-                search_url=search_url,
                 customer_uuid=customer_uuid,
-                status=status
+                status='FAILURE: missing URL'
             ))
-            if not success:
-                if verbose <= Verbose.WARNING:
-                    print("Could not insert search for entry %s" % request_i['id'])
-                continue
-            else:
-                article_search = sql_utils.getSearch(request_i['id'])
-                search_article = sql_utils.getArticle(article_search.search_url)
+            continue
+        success = sql_utils.insertEntry(models.ArticleSearch(
+            gmail_request_uuid=request_i['id'],
+            search_url=search_url,
+            customer_uuid=customer_uuid,
+        ))
+        if not success:
+            if verbose <= Verbose.WARNING:
+                print("Could not insert search for entry %s" % request_i['id'])
+            continue
+        else:
+            article_search = sql_utils.getSearch(request_i['id'])
+            print(article_search)
+            print(article_search.search_url)
+            print(str(article_search.search_url))
+            search_article = sql_utils.getArticle(article_search.search_url)
+            if search_article is None:
+                search_article = downloadArticle(article_search, verbose=verbose)
                 if search_article is None:
-                    search_article = downloadArticle(article_search, verbose=verbose)
-                    if search_article is None:
-                        if verbose <= Verbose.ERROR:
-                            print('FAILURE: Article not found', article_search.article_search_uuid)
-                        sql_utils.updateSearchStatus(article_search.article_search_uuid, 'FAILURE: Article not found')
-                        continue
-                search_attribute = 'title'
-                result = article_search_utils.getSimilarArticlesFromText(
-                    search_article.title if search_attribute == 'title' else search_article.description,
-                    search_attribute, article_search.n_results)
-                result['title_url'] = result[['title', 'article_url']].apply(__addUrlLinks, axis=1)
-                html_text = result[['source_name', 'title_url']].to_html(escape=False, header=False, index=False)
-                plain_text = result[['source_name', 'title']].to_string(header=False, index=False)
-                message = create_message(
-                    SENDER_EMAIL,
-                    article_search.customer.customer_email,
-                    "Your News search is ready.",
-                    plain_text,
-                    html_text)
-                sent_message = send_message(service, 'me', message)
-                if sent_message is None:
-                    sql_utils.updateSearchStatus(article_search.article_search_uuid, 'FAILURE: Message not sent')
-                else:
-                    sql_utils.updateSearchStatus(article_search.article_search_uuid, 'SUCCESS')
-                    sql_utils.updateSearch(article_search.article_search_uuid, sent_message['id'])
+                    if verbose <= Verbose.ERROR:
+                        print('FAILURE: Article not found', article_search.article_search_uuid)
+                    sql_utils.updateSearchStatus(article_search.article_search_uuid, 'FAILURE: Article not found')
+                    continue
+            search_attribute = 'title'
+            result = data_science_utils.getSimilarArticlesFromText(
+                search_article.title if search_attribute == 'title' else search_article.description,
+                search_attribute, article_search.n_results)
+            result['title_url'] = result[['title', 'article_url']].apply(__addUrlLinks, axis=1)
+            html_text = result[['source_name', 'title_url']].to_html(escape=False, header=False, index=False)
+            plain_text = result[['source_name', 'title']].to_string(header=False, index=False)
+            message = create_message(
+                SENDER_EMAIL,
+                article_search.customer.customer_email,
+                "Your News search is ready.",
+                plain_text,
+                html_text)
+            sent_message = send_message(service, 'me', message)
+            if sent_message is None:
+                sql_utils.updateSearchStatus(article_search.article_search_uuid, 'FAILURE: Message not sent')
+            else:
+                count += sql_utils.updateSearchStatus(article_search.article_search_uuid, 'SUCCESS')
+                sql_utils.updateSearch(article_search.article_search_uuid, sent_message['id'])
+    return count
 
 
 def __addUrlLinks(entry):
@@ -320,11 +327,13 @@ def pipelineEmails(verbose=Verbose.ERROR):
             request_email_i = parse_email(values['from'])
             if 'no-reply' in values['from']:
                 sql_utils.insertEntry(models.InvalidEmail(
+                    gmail_request_uuid=m['id'],
                     customer_uuid=sql_utils.getOrSetCustomerID(request_email_i),
                     status='NO-REPLY sender'
                 ))
             elif values['from'] == SENDER_EMAIL:
                 sql_utils.insertEntry(models.InvalidEmail(
+                    gmail_request_uuid=m['id'],
                     customer_uuid=sql_utils.getOrSetCustomerID(request_email_i),
                     status='SELF sender'
                 ))

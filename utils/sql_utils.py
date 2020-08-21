@@ -172,10 +172,10 @@ def getSearchMailIDs(host=Host.G_CLOUD_SSL, schema=models.schema):
 
 
 def getInvalidEmailIDs(host=Host.G_CLOUD_SSL, schema=models.schema):
-    return [i[0] for i in getDBSession(host=host, schema=schema).query(models.InvalidEmail.invalid_email_uuid).all()]
+    return [i[0] for i in getDBSession(host=host, schema=schema).query(models.InvalidEmail.gmail_request_uuid).all()]
 
 
-def getRawArticles(host=Host.G_CLOUD_SSL, schema=models.schema):
+def getRawArticlesQuery(host=Host.G_CLOUD_SSL, schema=models.schema):
     query = getDBSession(host=host, schema=schema).query(
         models.Article.article_uuid, models.Article.title,
         models.Article.description, models.ArticleContent.article_content
@@ -213,8 +213,21 @@ def updateSearchStatus(article_search_uuid, status, host=Host.G_CLOUD_SSL, schem
     stmt = sqlalchemy.update(models.ArticleSearch)\
         .where(models.ArticleSearch.article_search_uuid == article_search_uuid)\
         .values(status=status)
-    getEngine(host=host, schema=schema).connect().execute(stmt)
-    getDBSession(host=host, schema=schema).commit()
+    try:
+        result = getEngine(host=host, schema=schema).connect().execute(stmt)
+        if result.row == 1:
+            return 1
+        elif result.row == 0:
+            return 0
+        else:
+            print("ERROR: Updating multiple rows at the same time")
+            pass
+    except BaseException as e:
+        print(article_search_uuid, status, host.name, schema)
+        print(e)
+        return 0
+    return 0
+    # getDBSession(host=host, schema=schema).commit()
 
 
 def updateSearch(article_search_uuid, gmail_answer_uuid, host=Host.G_CLOUD_SSL, schema=models.schema):
@@ -222,4 +235,4 @@ def updateSearch(article_search_uuid, gmail_answer_uuid, host=Host.G_CLOUD_SSL, 
         .where(models.ArticleSearch.article_search_uuid == article_search_uuid)\
         .values(gmail_answer_uuid=gmail_answer_uuid)
     getEngine(host=host, schema=schema).connect().execute(stmt)
-    getDBSession(host=host, schema=schema).commit()
+    # getDBSession(host=host, schema=schema).commit()

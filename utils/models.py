@@ -151,6 +151,7 @@ class InvalidEmail(Base):
     __table_args__ = {"schema": schema}
 
     invalid_email_uuid = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False, unique=True)
+    gmail_request_uuid = Column(Text, unique=True, nullable=False)
     customer_uuid = Column(UUID, ForeignKey(schema + ".customers.customer_uuid"), nullable=False)
     status = Column(Text)
 
