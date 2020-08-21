@@ -333,8 +333,7 @@ def loadRoutine(schema=models.schema, host=sql_utils.Host.G_CLOUD_SSL, verbose=V
     # NewsAPI
     count += pipelineNewsAPIHeadline(fetchSource=True, schema=schema, host=host, verbose=verbose)
     for topic in [
-            'people', 'fashion', 'politics', 'COVID', 'elections', 'sport', 'news', 'war', 'world', 'europe',
-            'technology', 'science', 'movie', 'Trump', 'Biden', 'news', 'business', 'trade', 'stock', 'S&P500', 'tax',
-            'jobs', 'trends', 'design', 'tv']:
+            'people', 'fashion', 'politics', 'COVID', 'elections', 'sport', 'news', 'world', 'europe',
+            'technology', 'science', 'art', 'business', 'tax', 'jobs', 'trends', 'design']:
         count += pipelineNewsAPITopic(topic=topic, fetchSource=True, schema=schema, host=host, verbose=verbose)
     return count
