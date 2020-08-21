@@ -2,7 +2,6 @@
 Machine Learning models creation and usage function
 """
 
-import plotly
 import pickle
 import gensim
 import spacy
@@ -18,8 +17,6 @@ from utils import sql_utils
 from utils.verbose import Verbose
 
 nlp = spacy.load('en_core_web_sm')
-
-plotly.offline.init_notebook_mode(connected=True)
 
 """
 NLP model dimension
