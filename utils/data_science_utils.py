@@ -2,7 +2,6 @@
 Machine Learning models creation and usage function
 """
 
-import pickle
 import gensim
 import spacy
 
@@ -15,6 +14,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from utils import models
 from utils import sql_utils
 from utils.verbose import Verbose
+from utils.data_manager.DataManager import getModel, setModel
 
 nlp = spacy.load('en_core_web_sm')
 
@@ -39,16 +39,6 @@ class Models:
     W2V = 'W2V'  # Word to Vec
     NEWS_VECT = 'NEWS_VECT'  # News Vectors
     KNN = 'KNN'  # K Nearest Neighbour
-
-
-def setModel(w2v_model, data):
-    with open('../ml_models/' + w2v_model + '.pickle', 'wb') as f:
-        pickle.dump(data, f)
-
-
-def getModel(w2v_model):
-    with open('../ml_models/' + w2v_model + '.pickle', 'rb') as f:
-        return pickle.load(f)
 
 
 def cleanText(text, to_remove=['PUNCT', 'PRON', 'SYM', 'NUM', 'ADP']):
