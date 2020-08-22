@@ -23,10 +23,10 @@ class DataManager:
 
     @classmethod
     def setModel(cls, model, data):
-        with open(cls.getModulePath() + os.sept + 'ml_models' + os.sep + model + '.pickle', 'wb') as f:
+        with open(cls.getModulePath() + os.sep + 'ml_models' + os.sep + model + '.pickle', 'wb') as f:
             pickle.dump(data, f)
 
     @classmethod
     def getModel(cls, model):
-        with open(cls.getModulePath() + os.sept + 'ml_models' + os.sep + model + '.pickle', 'rb') as f:
+        with open(cls.getModulePath() + os.sep + 'ml_models' + os.sep + model + '.pickle', 'rb') as f:
             return pickle.load(f)
