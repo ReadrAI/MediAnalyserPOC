@@ -19,7 +19,7 @@ from utils import data_science_utils
 from utils import scrape_utils
 from utils.verbose import Verbose
 from utils import models
-from utils import data_manager
+from utils.data_manager import DataManager
 
 
 # If modifying these scopes, delete the file token.pickle.
@@ -43,7 +43,7 @@ def __createGmailService():
     # The file token.pickle stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first
     # time.
-    modulePath = data_manager.getModulePath()
+    modulePath = DataManager.getModulePath()
     tokenPath = modulePath + os.sep + 'credentials' + os.sep + 'newshorizonmail_token.pickle'
     credentialPath = modulePath + os.sep + 'credentials' + os.sep + 'newshorizonmail_credentials.json'
     if os.path.exists(tokenPath):

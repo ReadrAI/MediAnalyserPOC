@@ -13,12 +13,13 @@ class DataManager:
     @classmethod
     def getModulePath(cls):
         if cls.modulePath is not None:
-            return cls.getmodulePath()
+            return cls.modulePath
         else:
             for root, subdirs, files in os.walk(os.path.expanduser("~")):
                 for sd in subdirs:
                     if sd == "MediAnalyserPOC":
-                        return root + os.sep + sd
+                        cls.modulePath = root + os.sep + sd
+                        return cls.modulePath
 
     @classmethod
     def setModel(cls, model, data):

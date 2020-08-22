@@ -14,7 +14,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from utils import models
 from utils import sql_utils
 from utils.verbose import Verbose
-from utils.data_manager.DataManager import getModel, setModel
+from utils.data_manager import DataManager
 
 nlp = spacy.load('en_core_web_sm')
 
@@ -62,12 +62,12 @@ def createArticleDictionnary(attributes=list(w2v_attributes.keys()), host=sql_ut
             if article[attribute_i] is not None:
                 news_dict[article_uuid][attribute_i] = cleanText(
                     article[attribute_i])
-    setModel(Models.NEWS_DICT, news_dict)
-    setModel(Models.NEWS_INDEX, list(news_dict.keys()))
+    DataManager.setModel(Models.NEWS_DICT, news_dict)
+    DataManager.setModel(Models.NEWS_INDEX, list(news_dict.keys()))
 
 
 def createWord2VectorModel(attributes=list(w2v_attributes.keys())):
-    news_dict = getModel(Models.NEWS_DICT)
+    news_dict = DataManager.getModel(Models.NEWS_DICT)
     documents = []
     for article in news_dict.values():
         for attribute_i in attributes:
@@ -84,12 +84,12 @@ def createWord2VectorModel(attributes=list(w2v_attributes.keys())):
         total_examples=len(documents),
         epochs=200)
     w2v_model.init_sims(replace=True)
-    setModel(Models.W2V, w2v_model)
+    DataManager.setModel(Models.W2V, w2v_model)
 
 
 def createTFIDFModel(attribute, min_df=1, max_df=1., ngram_range=(1, 1)):
-    news_dict = getModel(Models.NEWS_DICT)
-    w2v_model = getModel(Models.W2V)
+    news_dict = DataManager.getModel(Models.NEWS_DICT)
+    w2v_model = DataManager.getModel(Models.W2V)
 
     result = {}
     result['documents'] = [(v[attribute]) for v in news_dict.values() if attribute in v]
@@ -112,15 +112,15 @@ def createNewsVectors(attributes=list(w2v_attributes.keys())):
     news_vect = {}
     for attribute_i in attributes:
         news_vect[attribute_i] = createTFIDFModel(attribute_i, min_df=3, max_df=0.05, ngram_range=(1, 1))
-    setModel(Models.NEWS_VECT, news_vect)
+    DataManager.setModel(Models.NEWS_VECT, news_vect)
 
 
 def createKNNModel(attributes=list(w2v_attributes.keys()), neighbors=5):
-    news_vect = getModel(Models.NEWS_VECT)
+    news_vect = DataManager.getModel(Models.NEWS_VECT)
     neighbours = {}
     for attribute_i in attributes:
         neighbours[attribute_i] = NearestNeighbors(n_neighbors=neighbors).fit(news_vect[attribute_i]['news_vector'])
-    setModel(Models.KNN, neighbours)
+    DataManager.setModel(Models.KNN, neighbours)
 
 
 def createNlpModels(attributes=list(w2v_attributes.keys()), schema=models.schema, host=sql_utils.Host.G_CLOUD_SSL,
@@ -133,7 +133,7 @@ def createNlpModels(attributes=list(w2v_attributes.keys()), schema=models.schema
 
 def getTextEmbedding(search_text, attribute, verbose=Verbose.ERROR):
 
-    news_vect = getModel(Models.NEWS_VECT)
+    news_vect = DataManager.getModel(Models.NEWS_VECT)
 
     embedding = np.zeros([w2v_size])
     word_count = 0
@@ -147,7 +147,7 @@ def getTextEmbedding(search_text, attribute, verbose=Verbose.ERROR):
             embedding += vec * weight
         except (ValueError, KeyError):
             try:
-                embedding += getModel(Models.W2V).wv.get_vector(word)
+                embedding += DataManager.getModel(Models.W2V).wv.get_vector(word)
                 word_count += 1
             except KeyError:
                 if verbose <= Verbose.ERROR:
@@ -161,8 +161,8 @@ def getTextEmbedding(search_text, attribute, verbose=Verbose.ERROR):
 
 def getSimilarArticlesFromText(search_text, attribute='title', nb_articles=10, schema=models.schema,
                                host=sql_utils.Host.G_CLOUD_SSL):
-    news_index = getModel(Models.NEWS_INDEX)
-    neighbours = getModel(Models.KNN)
+    news_index = DataManager.getModel(Models.NEWS_INDEX)
+    neighbours = DataManager.getModel(Models.KNN)
     embedding = getTextEmbedding(search_text, attribute)
 
     neighbour_articles = neighbours[attribute].kneighbors(embedding.reshape(1, w2v_size), n_neighbors=nb_articles)
