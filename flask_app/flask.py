@@ -1,8 +1,11 @@
 import threading
 import pytz
 import datetime
+import os
 
 from flask import Flask
+from flask import send_from_directory
+
 
 from utils import mail_utils
 from utils.verbose import Verbose
@@ -17,3 +20,9 @@ def hello():
     now = datetime.datetime.now(tz=pytz.timezone('Europe/Brussels')).strftime("%Y.%m.%d %H:%M %Z")
     print("Email Request: Loading new emails", now)
     return "<h1 style='color:blue'>Hello There!</h1>"
+
+
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory(os.path.join(app.root_path, 'static'),
+                               'favicon.ico', mimetype='image/vnd.microsoft.icon')
