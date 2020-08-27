@@ -348,3 +348,12 @@ def pipelineEmails(verbose=Verbose.ERROR):
     if verbose <= Verbose.INFO:
         print("Answered Email Count:", count)
     return count
+
+
+def setPushNotifications():
+    service = getGmailService()
+    request = {
+        'labelIds': ['INBOX'],
+        'topicName': 'projects/future-oasis-286707/topics/email-request-topic'
+    }
+    return service.users().watch(userId=SENDER_EMAIL, body=request).execute()
