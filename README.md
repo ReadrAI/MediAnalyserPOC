@@ -89,10 +89,21 @@ https://towardsdatascience.com/tf-idf-explained-and-python-sklearn-implementatio
 ### Mail service
 
 https://realpython.com/python-send-email/
+
 https://blog.mailtrap.io/send-emails-with-gmail-api/
+
 https://developers.google.com/gmail/api/guides/push
 
 ### Google Cloud Engine
 
 https://cloud.google.com/sql/docs/mysql/connect-app-engine-standard
+
 https://cloud.google.com/secret-manager/docs/overview
+
+### Flask app with gUnicorn and nginx
+
+https://www.digitalocean.com/community/tutorials/how-to-serve-flask-applications-with-gunicorn-and-nginx-on-ubuntu-18-04
+
+https://www.datadoghq.com/blog/nginx-502-bad-gateway-errors-gunicorn/
+
+https://certbot.eff.org/lets-encrypt/debianbuster-nginx

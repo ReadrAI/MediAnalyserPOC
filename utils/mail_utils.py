@@ -24,7 +24,8 @@ from utils.data_manager import DataManager
 
 # If modifying these scopes, delete the file token.pickle.
 SCOPES = ['https://www.googleapis.com/auth/gmail.send',
-          'https://www.googleapis.com/auth/gmail.modify']
+          'https://www.googleapis.com/auth/gmail.modify',
+          'https://www.googleapis.com/auth/pubsub']
 
 SENDER_EMAIL = "newshorizonapp@gmail.com"
 
