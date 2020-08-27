@@ -1,4 +1,4 @@
-from flask_app.flask import app
+from newshorizon import app
 
 if __name__ == "__main__":
     app.run()
