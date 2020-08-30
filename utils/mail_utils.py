@@ -2,7 +2,6 @@
 Util functions for mail reception and sending
 """
 
-import itertools
 import re
 import pickle
 import base64
@@ -232,14 +231,11 @@ def downloadArticle(article_search, verbose=Verbose.ERROR):
             search_elements = search_elements.split('.')[-2]
         search_elements = [x for x in map(data_science_utils.cleanText, search_elements.split('-'))
                            if not x.isdecimal() and x != '']
-        search_keys = [list(x) for r in min(range(len(search_elements)), 2)
-                       for x in itertools.combinations(search_elements, r + 1)]
-        for key in search_keys:
-            scrape_utils.pipelineNewsAPIArticle(
-                " ".join(key),
-                source.source_name.lower().replace(" ", "-"),
-                fetchSource=True,
-                verbose=verbose)
+        scrape_utils.pipelineNewsAPIArticle(
+            " ".join(search_elements),
+            source.source_name.lower().replace(" ", "-"),
+            fetchSource=True,
+            verbose=verbose)
         articles = sql_utils.getArticle(article_search.search_url)
         if len(articles) == 0:
             # could not find article easily
