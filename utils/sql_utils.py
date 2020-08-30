@@ -63,11 +63,11 @@ class Host:
             return sqlalchemy.create_engine(getDBURLFromHost(cls), connect_args=connect_args)
 
 
-def getDBUrl(username, password, database, host, port, params={}):
+def getDBUrl(username, password, database, host, port, params={}, verbose=Verbose.ERROR):
     return 'postgres://' + username + ':' + password + '@' + host + ':' + str(port) + '/' + database
 
 
-def getDBURLFromHost(host):
+def getDBURLFromHost(host, verbose=Verbose.ERROR):
     username = host.username
     password = host.password
     host_address = host.host
@@ -77,7 +77,7 @@ def getDBURLFromHost(host):
 
 
 # This function should not be called outside of sql_utils.
-def getEngine(host=Host.G_CLOUD_SSL, schema=models.schema, connect_args={}):
+def getEngine(host=Host.G_CLOUD_SSL, schema=models.schema, connect_args={}, verbose=Verbose.ERROR):
     global engines
     try:
         engines
@@ -95,7 +95,7 @@ def getEngine(host=Host.G_CLOUD_SSL, schema=models.schema, connect_args={}):
 
 
 # This function should not be called outside of sql_utils.
-def getDBSession(host=Host.G_CLOUD_SSL, schema=models.schema):
+def getDBSession(host=Host.G_CLOUD_SSL, schema=models.schema, verbose=Verbose.ERROR):
     global sessions
     try:
         sessions
@@ -107,13 +107,13 @@ def getDBSession(host=Host.G_CLOUD_SSL, schema=models.schema):
     return sessions[schema]
 
 
-def dropAllTables(host=Host.G_CLOUD_SSL, schema=models.schema):
+def dropAllTables(host=Host.G_CLOUD_SSL, schema=models.schema, verbose=Verbose.ERROR):
     meta = sqlalchemy.MetaData(getEngine(host=host, schema=schema))
     meta.reflect()
     meta.drop_all()
 
 
-def getArticle(url, host=Host.G_CLOUD_SSL, schema=models.schema):
+def getArticle(url, host=Host.G_CLOUD_SSL, schema=models.schema, verbose=Verbose.ERROR):
     articles = getDBSession(host=host, schema=schema).query(models.Article)\
         .filter(models.Article.article_url == url).all()
     if len(articles) == 0:
@@ -155,7 +155,7 @@ def getSourceFromUrl(url, host=Host.G_CLOUD_SSL, schema=models.schema, verbose=V
     return sources[0]
 
 
-def getSearch(gmail_request_uuid, host=Host.G_CLOUD_SSL, schema=models.schema):
+def getSearch(gmail_request_uuid, host=Host.G_CLOUD_SSL, schema=models.schema, verbose=Verbose.ERROR):
     searches = getDBSession(host=host, schema=schema).query(models.ArticleSearch)\
         .filter(models.ArticleSearch.gmail_request_uuid == gmail_request_uuid).all()
     if searches is None:
@@ -164,7 +164,7 @@ def getSearch(gmail_request_uuid, host=Host.G_CLOUD_SSL, schema=models.schema):
         return searches[0]
 
 
-def getSourceID(name, host=Host.G_CLOUD_SSL, schema=models.schema):
+def getSourceID(name, host=Host.G_CLOUD_SSL, schema=models.schema, verbose=Verbose.ERROR):
     source = getSource(name, host=host, schema=schema)
     if source is None:
         return None
@@ -172,7 +172,24 @@ def getSourceID(name, host=Host.G_CLOUD_SSL, schema=models.schema):
         return str(source.source_uuid)
 
 
-def getCustomerID(email, host=Host.G_CLOUD_SSL, schema=models.schema):
+def getOrSetSourceID(name, url, host=Host.G_CLOUD_SSL, schema=models.schema, verbose=Verbose.ERROR):
+    source_uuid = getSourceID(name, host=host, schema=schema)
+    if source_uuid is None:
+        url_stem = urlparse(url).netloc
+        if url_stem != '':
+            url_stem = url_stem("feeds.", "")
+            insertEntry(models.Source(
+                source_name=name,
+                website_url=url_stem,
+            ))
+            source_uuid = getSourceID(name, host=host, schema=schema)
+        else:
+            if verbose <= Verbose.ERROR:
+                print("Could not add source %s with url %s: stem is %s." % (name, url, url_stem))
+    return source_uuid
+
+
+def getCustomerID(email, host=Host.G_CLOUD_SSL, schema=models.schema, verbose=Verbose.ERROR):
     customer_uuid = getDBSession(host=host, schema=schema).query(models.Customer.customer_uuid)\
         .filter(models.Customer.customer_email == email).all()
     if customer_uuid is None or len(customer_uuid) == 0:
@@ -181,7 +198,7 @@ def getCustomerID(email, host=Host.G_CLOUD_SSL, schema=models.schema):
         return str(customer_uuid[0][0])
 
 
-def getOrSetCustomerID(email, host=Host.G_CLOUD_SSL, schema=models.schema):
+def getOrSetCustomerID(email, host=Host.G_CLOUD_SSL, schema=models.schema, verbose=Verbose.ERROR):
     customer_uuid = getCustomerID(email, host=host, schema=schema)
     if customer_uuid is None:
         insertEntry(models.Customer(
@@ -191,15 +208,15 @@ def getOrSetCustomerID(email, host=Host.G_CLOUD_SSL, schema=models.schema):
     return customer_uuid
 
 
-def getSearchMailIDs(host=Host.G_CLOUD_SSL, schema=models.schema):
+def getSearchMailIDs(host=Host.G_CLOUD_SSL, schema=models.schema, verbose=Verbose.ERROR):
     return [r[0] for r in getDBSession(host=host, schema=schema).query(models.ArticleSearch.gmail_request_uuid).all()]
 
 
-def getInvalidEmailIDs(host=Host.G_CLOUD_SSL, schema=models.schema):
+def getInvalidEmailIDs(host=Host.G_CLOUD_SSL, schema=models.schema, verbose=Verbose.ERROR):
     return [i[0] for i in getDBSession(host=host, schema=schema).query(models.InvalidEmail.gmail_request_uuid).all()]
 
 
-def getRawArticlesQuery(host=Host.G_CLOUD_SSL, schema=models.schema):
+def getRawArticlesQuery(host=Host.G_CLOUD_SSL, schema=models.schema, verbose=Verbose.ERROR):
     query = getDBSession(host=host, schema=schema).query(
         models.Article.article_uuid, models.Article.title,
         models.Article.description, models.ArticleContent.article_content
@@ -224,7 +241,8 @@ def insertEntry(entry, host=Host.G_CLOUD_SSL, schema=models.schema, verbose=Verb
         return False
 
 
-def populateFeeds(source_name, feed_url, section=None, host=Host.G_CLOUD_SSL, schema=models.schema):
+def populateFeeds(source_name, feed_url, section=None, host=Host.G_CLOUD_SSL, schema=models.schema,
+                  verbose=Verbose.ERROR):
     source_uuid = getSourceID(source_name, host=host, schema=schema)
     return insertEntry(models.RSSFeed(
         source_uuid=source_uuid,
@@ -233,7 +251,7 @@ def populateFeeds(source_name, feed_url, section=None, host=Host.G_CLOUD_SSL, sc
     ), host=Host.G_CLOUD_SSL, schema=models.schema)
 
 
-def updateSearchStatus(article_search_uuid, status, host=Host.G_CLOUD_SSL, schema=models.schema):
+def updateSearchStatus(article_search_uuid, status, host=Host.G_CLOUD_SSL, schema=models.schema, verbose=Verbose.ERROR):
     stmt = sqlalchemy.update(models.ArticleSearch)\
         .where(models.ArticleSearch.article_search_uuid == article_search_uuid)\
         .values(status=status)
@@ -254,7 +272,8 @@ def updateSearchStatus(article_search_uuid, status, host=Host.G_CLOUD_SSL, schem
     # getDBSession(host=host, schema=schema).commit()
 
 
-def updateSearch(article_search_uuid, gmail_answer_uuid, host=Host.G_CLOUD_SSL, schema=models.schema):
+def updateSearch(article_search_uuid, gmail_answer_uuid, host=Host.G_CLOUD_SSL, schema=models.schema,
+                 verbose=Verbose.ERROR):
     stmt = sqlalchemy.update(models.ArticleSearch)\
         .where(models.ArticleSearch.article_search_uuid == article_search_uuid)\
         .values(gmail_answer_uuid=gmail_answer_uuid)
