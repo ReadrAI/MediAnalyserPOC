@@ -298,7 +298,8 @@ def answer_emails(request_emails, host=sql_utils.Host.G_CLOUD_SSL, schema=models
             # print(article_search.search_url)
             # print(str(article_search.search_url))
             search_article = article_search.article
-            # search_article = sql_utils.getArticle(article_search.search_url, host=host, schema=schema, verbose=verbose)
+            # search_article = sql_utils.getArticle(article_search.search_url, host=host, schema=schema,
+            #                                       verbose=verbose)
             if search_article is None:
                 # broken code, add when fixed
                 # search_article = downloadArticle(article_search, host=host, schema=schema, verbose=verbose)

@@ -58,7 +58,7 @@ def getDBURLFromHost(host, verbose=Verbose.ERROR):
 
 
 # This function should not be called outside of sql_utils.
-def getEngine(host=Host.G_CLOUD_SSL, schema=models.schema, connect_args={}, verbose=Verbose.ERROR):
+def getEngine(connect_args={}, host=Host.G_CLOUD_SSL, schema=models.schema, verbose=Verbose.ERROR):
     global engines
     try:
         engines
@@ -253,7 +253,7 @@ def updateSearch(article_search_uuid, gmail_answer_uuid, host=Host.G_CLOUD_SSL, 
 
 
 def getRSSFeeds(host=Host.G_CLOUD_SSL, schema=models.schema, verbose=Verbose.ERROR):
-    return getDBSession(schema=schema, host=host, verbose=verbose).query(models.RSSFeed).all()
+    return getDBSession(host=host, schema=schema, verbose=verbose).query(models.RSSFeed).all()
 
 
 def getArticleData(article_uuids, host=Host.G_CLOUD_SSL, schema=models.schema, verbose=Verbose.ERROR):

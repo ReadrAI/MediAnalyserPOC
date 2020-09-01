@@ -3,7 +3,6 @@ Util functions for scraping and html queries
 """
 
 import os
-from os.path import expanduser
 import time
 import json
 import requests
@@ -16,6 +15,7 @@ from urllib.parse import urlparse
 from utils import sql_utils
 from utils import models
 from utils.verbose import Verbose
+from utils.data_manager import DataManager
 
 
 """
@@ -40,15 +40,15 @@ def getRootUrl(article_url):
 
 
 def getFileName(topic, source_name, page=None):
-    homeDir = expanduser("~")
-    return homeDir + os.sep + 'MediAnalyserPOC' + os.sep + 'raw_data' + os.sep + source_name.lower().replace(" ", "") \
+    homeDir = DataManager.getModulePath()
+    return homeDir + os.sep + 'raw_data' + os.sep + source_name.lower().replace(" ", "") \
         + '_' + datetime.now().strftime("%Y%m%d_%H%M") + '_' + topic.lower().replace(" ", "-") + \
         ('' if page is None else ('_%d' % page)) + '.csv'
 
 
 def importNYT(data, source_name, schema=models.schema, host=sql_utils.Host.G_CLOUD_SSL, verbose=Verbose.ERROR):
     count = 0
-    if 'status' not in data and data['status'] == 'OK' and data['results'] is not None:
+    if 'status' in data and data['status'] == 'OK' and data['results'] is not None:
         if verbose <= Verbose.WARNING and len(data['results']) != data['num_results']:
             print("Number of results not matching:",
                   len(data['results']), data['num_results'])
@@ -277,7 +277,7 @@ def __pipelineNewsAPI(source_name, file_name, url=None, loadDisk=False, fetchSou
     return importNewsAPIArticles(articles, source_name, schema=schema, host=host, verbose=verbose)
 
 
-def __feedImporter(feed_data, feed, schema=models.schema, host=sql_utils.Host.G_CLOUD_SSL,
+def __feedImporter(feed_data, feed, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema, 
                    verbose=Verbose.ERROR):
     if 'entries' not in feed_data:
         raise ValueError("No entries in feed for", feed.feed_url)
@@ -290,23 +290,23 @@ def __feedImporter(feed_data, feed, schema=models.schema, host=sql_utils.Host.G_
         try:
             count += sql_utils.insertEntry(models.Article(
                 article_url=a['link'],
-                source_uuid=feed.source_uuid,
-                provider_uuid=feed.source_uuid,
-                rss_uuid=feed.feed_uuid,
+                source_uuid=str(feed.source_uuid),
+                provider_uuid=str(feed.source_uuid),
+                rss_uuid=str(feed.feed_uuid),
                 title=a['title'],
                 description=(a['summary'] if 'summary' in a else ''),
                 published_at=(
                     a['published'] if ('published' in a and a['published'] != '' and a['published'] is not None)
                     else datetime.utcnow()),
                 authors=([a['author']] if 'author' in a else [''])
-            ), schema=schema, host=host)
+            ), schema=schema, host=host, verbose=verbose)
         except KeyError:
             if verbose <= Verbose.ERROR:
                 print("Key Error for source", feed.feed_url, a.keys(), a['link'])
     return count
 
 
-def importAllFeeds(schema=models.schema, host=sql_utils.Host.G_CLOUD_SSL, verbose=Verbose.ERROR):
+def importAllFeeds(host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema, verbose=Verbose.ERROR):
     n_imported = 0
     feeds = sql_utils.getRSSFeeds(host=host, schema=schema, verbose=verbose)
     for feed_i in feeds:
@@ -314,19 +314,18 @@ def importAllFeeds(schema=models.schema, host=sql_utils.Host.G_CLOUD_SSL, verbos
             print("Parsing feed %s" % feed_i.feed_url)
         data = feedparser.parse(feed_i.feed_url)
         try:
-            count = __feedImporter(data, feed_i, schema=models.schema, host=host, verbose=verbose)
+            n_imported += __feedImporter(data, feed_i, host=host, schema=models.schema, verbose=verbose)
         except ValueError as ve:
             if verbose <= Verbose.ERROR:
                 print(ve)
                 print("Feed error at %s" % feed_i.feed_url)
-        n_imported += count
     return n_imported
 
 
-def loadRoutine(schema=models.schema, host=sql_utils.Host.G_CLOUD_SSL, verbose=Verbose.INFO):
+def loadRoutine(host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema, verbose=Verbose.INFO):
     count = 0
     # RSS feeds
-    count += importAllFeeds(schema=schema, host=host, verbose=verbose)
+    count += importAllFeeds(host=host, schema=schema, verbose=verbose)
     # NYT
     count += pipelineNYTHeadlines(fetchSource=True, schema=schema, host=host, verbose=verbose)
     count += pipelineNYTNewsWire(fetchSource=True, schema=schema, host=host, verbose=verbose)
