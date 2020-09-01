@@ -42,6 +42,7 @@ class Article(Base):
     article_url = Column(Text, nullable=False, unique=True)
     source_uuid = Column(UUID, ForeignKey(schema + ".sources.source_uuid"), nullable=False)
     provider_uuid = Column(UUID, ForeignKey(schema + ".sources.source_uuid"), nullable=False)
+    rss_uuid = Column(UUID, ForeignKey(schema + ".rss_feeds.feed_uuid"))
     title = Column(Text, nullable=False)
     description = Column(Text)
     authors = Column(ARRAY(String))
@@ -50,6 +51,7 @@ class Article(Base):
 
     source = relationship("Source", foreign_keys=[source_uuid])
     provider = relationship("Source", foreign_keys=[provider_uuid])
+    rss_feed = relationship("RSSFeed")
 
     def __repr__(self):
         return '<Article {}: {}>'.format(self.article_uuid, self.title)
