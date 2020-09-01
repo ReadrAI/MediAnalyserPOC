@@ -292,7 +292,7 @@ def answer_emails(request_emails, host=sql_utils.Host.G_CLOUD_SSL, schema=models
             continue
         else:
             if verbose <= Verbose.DEBUG:
-                print("### Getting article search %s at" % request_i['subject'], getCurrentTimestamp())
+                print("### Getting article search at", getCurrentTimestamp())
             article_search = sql_utils.getSearch(request_i['id'], host=host, schema=schema, verbose=verbose)
             # print(article_search)
             # print(article_search.search_url)
@@ -309,6 +309,8 @@ def answer_emails(request_emails, host=sql_utils.Host.G_CLOUD_SSL, schema=models
                                                  host=host, schema=schema, verbose=verbose)
                     continue
             search_attribute = 'title'
+            if verbose <= Verbose.DEBUG:
+                print("### Starting similarity search at", getCurrentTimestamp())
             result = data_science_utils.getSimilarArticlesFromText(
                 search_article.title if search_attribute == 'title' else search_article.description,
                 search_attribute, article_search.n_results)
@@ -321,7 +323,11 @@ def answer_emails(request_emails, host=sql_utils.Host.G_CLOUD_SSL, schema=models
                 "Your News search is ready.",
                 plain_text,
                 html_text)
+            if verbose <= Verbose.DEBUG:
+                print("### Sending answer email at", getCurrentTimestamp())
             sent_message = send_message(service, 'me', message)
+            if verbose <= Verbose.DEBUG:
+                print("### Seting article search status at", getCurrentTimestamp())
             if sent_message is None:
                 sql_utils.updateSearchStatus(article_search.article_search_uuid, 'FAILURE: Message not sent', host=host,
                                              schema=schema, verbose=verbose)
@@ -380,6 +386,8 @@ def pipelineEmails(host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema, verbos
         print("### Starting to answer emails at",
               getCurrentTimestamp())
     count = answer_emails(request_emails, host=host, schema=schema, verbose=verbose)
+    if verbose <= Verbose.DEBUG:
+        print("### Email pipeline done at", getCurrentTimestamp())
     if verbose <= Verbose.INFO:
         print("Answered Email Count:", count)
     return count
