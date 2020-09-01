@@ -278,21 +278,22 @@ def __pipelineNewsAPI(source_name, file_name, url=None, loadDisk=False, fetchSou
     return importNewsAPIArticles(articles, source_name, schema=schema, host=host, verbose=verbose)
 
 
-def __feedImporter(feed_data, source_uuid, schema=models.schema, host=sql_utils.Host.G_CLOUD_SSL,
+def __feedImporter(feed_data, feed, schema=models.schema, host=sql_utils.Host.G_CLOUD_SSL,
                    verbose=Verbose.ERROR):
     if 'entries' not in feed_data:
-        raise ValueError("No entries in feed for", source_uuid)
+        raise ValueError("No entries in feed for", feed.feed_url)
     if 'status' not in feed_data:
         if verbose <= Verbose.DEBUG:
-            print("No status in feed for %s" % source_uuid)
-        raise ValueError("No status in feed for %s" % source_uuid)
+            print("No status in feed for %s" % feed.feed_url)
+        raise ValueError("No status in feed for %s" % feed.feed_url)
     count = 0
     for a in feed_data['entries']:
         try:
             count += sql_utils.insertEntry(models.Article(
                 article_url=a['link'],
-                source_uuid=source_uuid,
-                provider_uuid=source_uuid,
+                source_uuid=feed.source_uuid,
+                provider_uuid=feed.source_uuid,
+                rss_uuid=feed.feed_uuid,
                 title=a['title'],
                 description=(a['summary'] if 'summary' in a else ''),
                 published_at=(
@@ -302,7 +303,7 @@ def __feedImporter(feed_data, source_uuid, schema=models.schema, host=sql_utils.
             ), schema=schema, host=host)
         except KeyError:
             if verbose <= Verbose.ERROR:
-                print("Key Error for source", source_uuid, a.keys(), a['link'])
+                print("Key Error for source", feed.feed_url, a.keys(), a['link'])
     return count
 
 
@@ -314,7 +315,7 @@ def importAllFeeds(schema=models.schema, host=sql_utils.Host.G_CLOUD_SSL, verbos
             print("Parsing feed %s" % feed_i.feed_url)
         data = feedparser.parse(feed_i.feed_url)
         try:
-            count = __feedImporter(data, feed_i.source_uuid, schema=models.schema, host=host, verbose=verbose)
+            count = __feedImporter(data, feed_i, schema=models.schema, host=host, verbose=verbose)
         except ValueError as ve:
             if verbose <= Verbose.ERROR:
                 print(ve)
