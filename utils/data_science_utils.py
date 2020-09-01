@@ -160,7 +160,7 @@ def getTextEmbedding(search_text, attribute, verbose=Verbose.ERROR):
 
 
 def getSimilarArticlesFromText(search_text, attribute='title', nb_articles=10, schema=models.schema,
-                               host=sql_utils.Host.G_CLOUD_SSL):
+                               host=sql_utils.Host.G_CLOUD_SSL, verbose=Verbose.ERROR):
     news_index = DataManager.getModel(Models.NEWS_INDEX)
     neighbours = DataManager.getModel(Models.KNN)
     embedding = getTextEmbedding(search_text, attribute)
@@ -170,18 +170,8 @@ def getSimilarArticlesFromText(search_text, attribute='title', nb_articles=10, s
     for i, j in enumerate(neighbour_articles[1][0]):
         similar_articles[news_index[j]] = {}
         similar_articles[news_index[j]]['distance'] = neighbour_articles[0][0][i]
-    article_uuid = list(similar_articles.keys())
-    query = sql_utils.getDBSession(host=host, schema=schema).query(
-        models.Article.article_uuid,
-        models.Article.title,
-        models.Article.description,
-        models.Source.source_name,
-        models.Article.article_url
-    ).filter(
-        models.Article.article_uuid.in_(article_uuid)
-    ).join(
-        models.Source, models.Source.source_uuid == models.Article.source_uuid
-    )
+    article_uuids = list(similar_articles.keys())
+    query = sql_utils.getArticleData(article_uuids, host=host, schema=schema, verbose=verbose)
     similar_article_details = pd.read_sql(query.statement, query.session.bind)
     similar_article_details['article_uuid'] = similar_article_details['article_uuid'].astype(str)
     similar_articles_df = pd.DataFrame(similar_articles).T

@@ -81,7 +81,7 @@ def getNYTSections(api_key):
     return requests.get(url=url, params={}).json()
 
 
-def pipelineNYTHeadlines(loadDisk=False, fetchSource=False, schema=models.schema, host=sql_utils.Host.G_CLOUD_SSL, 
+def pipelineNYTHeadlines(loadDisk=False, fetchSource=False, schema=models.schema, host=sql_utils.Host.G_CLOUD_SSL,
                          verbose=Verbose.ERROR):
     source_name = 'New York Times'
     source = sql_utils.getSource(source_name, schema=schema, host=host)
@@ -102,7 +102,7 @@ def pipelineNYTHeadlines(loadDisk=False, fetchSource=False, schema=models.schema
     return count
 
 
-def pipelineNYTNewsWire(startPage=0, loadDisk=False, fetchSource=False, schema=models.schema, 
+def pipelineNYTNewsWire(startPage=0, loadDisk=False, fetchSource=False, schema=models.schema,
                         host=sql_utils.Host.G_CLOUD_SSL, verbose=Verbose.ERROR):
     source_name = 'New York Times'
     source = sql_utils.getSource(source_name, schema=schema, host=host)
@@ -155,8 +155,7 @@ def importNewsAPIArticles(articles, source_name, schema=models.schema, host=sql_
             authors=[a['author']]
         ), schema=schema, host=host)
         if a['content'] is not None:
-            article = sql_utils.getDBSession(schema=schema, host=host).query(models.Article).filter(
-                models.Article.article_url == a['url']).first()
+            article = sql_utils.getArticle(a['url'], host=host, schema=schema, verbose=verbose)
             if article is not None:
                 sql_utils.insertEntry(models.ArticleContent(
                     article_uuid=str(article.article_uuid),
@@ -309,7 +308,7 @@ def __feedImporter(feed_data, feed, schema=models.schema, host=sql_utils.Host.G_
 
 def importAllFeeds(schema=models.schema, host=sql_utils.Host.G_CLOUD_SSL, verbose=Verbose.ERROR):
     n_imported = 0
-    feeds = sql_utils.getDBSession(schema=schema, host=host).query(models.RSSFeed).all()
+    feeds = sql_utils.getRSSFeeds(host=host, schema=schema, verbose=verbose)
     for feed_i in feeds:
         if verbose <= Verbose.DEBUG:
             print("Parsing feed %s" % feed_i.feed_url)
