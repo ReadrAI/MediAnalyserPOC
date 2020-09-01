@@ -3,10 +3,12 @@ Util functions for mail reception and sending
 """
 
 import re
+import pytz
 import pickle
 import base64
 import email
 import os.path
+import datetime
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from googleapiclient.discovery import build
@@ -27,6 +29,10 @@ SCOPES = ['https://www.googleapis.com/auth/gmail.send',
           'https://www.googleapis.com/auth/pubsub']
 
 SENDER_EMAIL = "newshorizonapp@gmail.com"
+
+
+def getCurrentTimestamp():
+    return datetime.datetime.now(tz=pytz.timezone('Europe/Brussels')).strftime("%Y.%m.%d %H:%M %Z")
 
 
 def getGmailService():
@@ -250,15 +256,21 @@ def downloadArticle(article_search, host=sql_utils.Host.G_CLOUD_SSL, schema=mode
 def answer_emails(request_emails, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema, verbose=Verbose.ERROR):
     count = 0
     for request_i in request_emails:
+        if verbose <= Verbose.DEBUG:
+            print("### Article search for article %s at" % request_i['subject'], getCurrentTimestamp())
         if verbose <= Verbose.INFO:
             print("Processing request", request_i['id'])
             print("Subject:", request_i['subject'])
             print("Content:", request_i['content'])
         requester_email = parse_email(request_i['from'])
+        if verbose <= Verbose.DEBUG:
+            print("### Customer ID search at", getCurrentTimestamp())
         customer_uuid = sql_utils.getOrSetCustomerID(requester_email, host=host, schema=schema, verbose=verbose)
         search_url = getUrlFromText(request_i['subject'])
         if search_url is None:
             search_url = getUrlFromText(request_i['content'])
+        if verbose <= Verbose.DEBUG:
+            print("### Inserting search entry at", getCurrentTimestamp())
         if search_url is None:
             if verbose <= Verbose.ERROR:
                 print("No URL found for message %s: %s\n %s\n" % (
@@ -279,11 +291,14 @@ def answer_emails(request_emails, host=sql_utils.Host.G_CLOUD_SSL, schema=models
                 print("Could not insert search for entry %s" % request_i['id'])
             continue
         else:
+            if verbose <= Verbose.DEBUG:
+                print("### Getting article search %s at" % request_i['subject'], getCurrentTimestamp())
             article_search = sql_utils.getSearch(request_i['id'], host=host, schema=schema, verbose=verbose)
             # print(article_search)
             # print(article_search.search_url)
             # print(str(article_search.search_url))
-            search_article = sql_utils.getArticle(article_search.search_url, host=host, schema=schema, verbose=verbose)
+            search_article = article_search.article
+            # search_article = sql_utils.getArticle(article_search.search_url, host=host, schema=schema, verbose=verbose)
             if search_article is None:
                 # broken code, add when fixed
                 # search_article = downloadArticle(article_search, host=host, schema=schema, verbose=verbose)
@@ -323,10 +338,23 @@ def __addUrlLinks(entry):
 
 
 def pipelineEmails(host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema, verbose=Verbose.ERROR):
+    if verbose <= Verbose.DEBUG:
+        print("### Email pipeline started at",
+              getCurrentTimestamp())
     service = getGmailService()
     messages = get_messages(service, 'me')
+    if verbose <= Verbose.DEBUG:
+        print("### Past request loading at",
+              getCurrentTimestamp())
     past_requests = sql_utils.getSearchMailIDs(host=host, schema=schema, verbose=verbose)
+    if verbose <= Verbose.DEBUG:
+        print("### Invalid email loading at",
+              getCurrentTimestamp())
     invalid_emails = sql_utils.getInvalidEmailIDs(host=host, schema=schema, verbose=verbose)
+    if verbose <= Verbose.DEBUG:
+        print("### New emails fetching at",
+              getCurrentTimestamp())
+        print("### %d emails to fetch" % len(messages['messages']))
     request_emails = []
     for m in messages['messages']:
         if m['id'] not in past_requests and m['id'] not in invalid_emails:
@@ -335,7 +363,7 @@ def pipelineEmails(host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema, verbos
             if 'no-reply' in values['from']:
                 sql_utils.insertEntry(models.InvalidEmail(
                     gmail_request_uuid=m['id'],
-                    customer_uuid=sql_utils.getOrSetCustomerID(request_email_i, host=host, schema=schema, 
+                    customer_uuid=sql_utils.getOrSetCustomerID(request_email_i, host=host, schema=schema,
                                                                verbose=verbose),
                     status='NO-REPLY sender'
                 ), host=host, schema=schema, verbose=verbose)
@@ -348,6 +376,9 @@ def pipelineEmails(host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema, verbos
                 ), host=host, schema=schema, verbose=verbose)
             else:
                 request_emails.append(values)
+    if verbose <= Verbose.DEBUG:
+        print("### Starting to answer emails at",
+              getCurrentTimestamp())
     count = answer_emails(request_emails, host=host, schema=schema, verbose=verbose)
     if verbose <= Verbose.INFO:
         print("Answered Email Count:", count)

@@ -256,7 +256,7 @@ def getRSSFeeds(host=Host.G_CLOUD_SSL, schema=models.schema, verbose=Verbose.ERR
     return getDBSession(schema=schema, host=host, verbose=verbose).query(models.RSSFeed).all()
 
 
-def getArticleData(host=Host.G_CLOUD_SSL, schema=models.schema, verbose=Verbose.ERROR):
+def getArticleData(article_uuids, host=Host.G_CLOUD_SSL, schema=models.schema, verbose=Verbose.ERROR):
     return getDBSession(host=host, schema=schema).query(
         models.Article.article_uuid,
         models.Article.title,

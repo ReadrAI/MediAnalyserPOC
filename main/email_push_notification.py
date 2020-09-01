@@ -6,7 +6,7 @@ from utils import mail_utils
 
 print("==================================")
 print("Email Push Notification Routine Started")
-print("Timestamp:", datetime.datetime.now(tz=pytz.timezone('Europe/Brussels')).strftime("%Y.%m.%d %H:%M %Z"))
+print("Timestamp:", mail_utils.getCurrentTimestamp())
 
 watch = mail_utils.setPushNotifications()
 
