@@ -48,7 +48,7 @@ def getFileName(topic, source_name, page=None):
 
 def importNYT(data, source_name, schema=models.schema, host=sql_utils.Host.G_CLOUD_SSL, verbose=Verbose.ERROR):
     count = 0
-    if data['status'] == 'OK' and data['results'] is not None:
+    if 'status' not in data and data['status'] == 'OK' and data['results'] is not None:
         if verbose <= Verbose.WARNING and len(data['results']) != data['num_results']:
             print("Number of results not matching:",
                   len(data['results']), data['num_results'])
@@ -72,7 +72,7 @@ def importNYT(data, source_name, schema=models.schema, host=sql_utils.Host.G_CLO
     else:
         if verbose <= Verbose.ERROR:
             print("Data error:", data['status']
-                  if 'status' in data.keys() else "JSON Error")
+                  if 'status' in data.keys() else data)
     return count
 
 
