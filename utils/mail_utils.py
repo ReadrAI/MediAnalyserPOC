@@ -192,12 +192,13 @@ def parse_email(email_tag):
         return email_tag
 
 
-def downloadArticle(article_search, verbose=Verbose.ERROR):
-    sources = sql_utils.getSourceFromUrl(article_search.search_url, verbose=verbose)
+def downloadArticle(article_search, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema, verbose=Verbose.ERROR):
+    sources = sql_utils.getSourceFromUrl(article_search.search_url, host=host, schema=schema, verbose=verbose)
     if len(sources) == 0:
         if verbose <= Verbose.ERROR:
             print('FAILURE: Source not found', article_search.article_search_uuid)
-        sql_utils.updateSearchStatus(article_search.article_search_uuid, 'FAILURE: Source not found')
+        sql_utils.updateSearchStatus(article_search.article_search_uuid, 'FAILURE: Source not found', host=host,
+                                     schema=schema, verbose=verbose)
         return None
     else:
         if len(sources) == 1:
@@ -219,7 +220,8 @@ def downloadArticle(article_search, verbose=Verbose.ERROR):
             #         if len(sources) <= 1:
             #             break
             # if len(sources) == 0:  # eliminated too many sources, should not happen
-            #     sql_utils.updateSearchStatus(article_search.article_search_uuid, 'FAILURE: Source domain not found')
+            #     sql_utils.updateSearchStatus(article_search.article_search_uuid, 'FAILURE: Source domain not found',
+            #                                  host=host, schema=schema, verbose=verbose)
             #     if verbose <= Verbose.ERROR:
             #         print('FAILURE: Source domain not found', article_search.article_search_uuid)
             #     return None
@@ -235,8 +237,8 @@ def downloadArticle(article_search, verbose=Verbose.ERROR):
             " ".join(search_elements),
             source.source_name.lower().replace(" ", "-"),
             fetchSource=True,
-            verbose=verbose)
-        articles = sql_utils.getArticle(article_search.search_url)
+            host=host, schema=schema, verbose=verbose)
+        articles = sql_utils.getArticle(article_search.search_url, host=host, schema=schema, verbose=verbose)
         if len(articles) == 0:
             # could not find article easily
             # TODO add scraping procedure
@@ -245,7 +247,7 @@ def downloadArticle(article_search, verbose=Verbose.ERROR):
             return articles[0]
 
 
-def answer_emails(request_emails, verbose=Verbose.ERROR):
+def answer_emails(request_emails, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema, verbose=Verbose.ERROR):
     count = 0
     for request_i in request_emails:
         if verbose <= Verbose.INFO:
@@ -253,7 +255,7 @@ def answer_emails(request_emails, verbose=Verbose.ERROR):
             print("Subject:", request_i['subject'])
             print("Content:", request_i['content'])
         requester_email = parse_email(request_i['from'])
-        customer_uuid = sql_utils.getOrSetCustomerID(requester_email)
+        customer_uuid = sql_utils.getOrSetCustomerID(requester_email, host=host, schema=schema, verbose=verbose)
         search_url = getUrlFromText(request_i['subject'])
         if search_url is None:
             search_url = getUrlFromText(request_i['content'])
@@ -265,30 +267,31 @@ def answer_emails(request_emails, verbose=Verbose.ERROR):
                 gmail_request_uuid=request_i['id'],
                 customer_uuid=customer_uuid,
                 status='FAILURE: missing URL'
-            ))
+            ), host=host, schema=schema, verbose=verbose)
             continue
         success = sql_utils.insertEntry(models.ArticleSearch(
             gmail_request_uuid=request_i['id'],
             search_url=search_url,
             customer_uuid=customer_uuid,
-        ))
+        ), host=host, schema=schema, verbose=verbose)
         if not success:
             if verbose <= Verbose.WARNING:
                 print("Could not insert search for entry %s" % request_i['id'])
             continue
         else:
-            article_search = sql_utils.getSearch(request_i['id'])
+            article_search = sql_utils.getSearch(request_i['id'], host=host, schema=schema, verbose=verbose)
             # print(article_search)
             # print(article_search.search_url)
             # print(str(article_search.search_url))
-            search_article = sql_utils.getArticle(article_search.search_url)
+            search_article = sql_utils.getArticle(article_search.search_url, host=host, schema=schema, verbose=verbose)
             if search_article is None:
                 # broken code, add when fixed
-                # search_article = downloadArticle(article_search, verbose=verbose)
+                # search_article = downloadArticle(article_search, host=host, schema=schema, verbose=verbose)
                 if search_article is None:
                     if verbose <= Verbose.ERROR:
                         print('FAILURE: Article not found', article_search.article_search_uuid)
-                    sql_utils.updateSearchStatus(article_search.article_search_uuid, 'FAILURE: Article not found')
+                    sql_utils.updateSearchStatus(article_search.article_search_uuid, 'FAILURE: Article not found',
+                                                 host=host, schema=schema, verbose=verbose)
                     continue
             search_attribute = 'title'
             result = data_science_utils.getSimilarArticlesFromText(
@@ -305,10 +308,13 @@ def answer_emails(request_emails, verbose=Verbose.ERROR):
                 html_text)
             sent_message = send_message(service, 'me', message)
             if sent_message is None:
-                sql_utils.updateSearchStatus(article_search.article_search_uuid, 'FAILURE: Message not sent')
+                sql_utils.updateSearchStatus(article_search.article_search_uuid, 'FAILURE: Message not sent', host=host,
+                                             schema=schema, verbose=verbose)
             else:
-                count += sql_utils.updateSearchStatus(article_search.article_search_uuid, 'SUCCESS')
-                sql_utils.updateSearch(article_search.article_search_uuid, sent_message['id'])
+                count += sql_utils.updateSearchStatus(article_search.article_search_uuid, 'SUCCESS', host=host,
+                                                      schema=schema, verbose=verbose)
+                sql_utils.updateSearch(article_search.article_search_uuid, sent_message['id'], host=host, schema=schema,
+                                       verbose=verbose)
     return count
 
 
@@ -316,11 +322,11 @@ def __addUrlLinks(entry):
     return '<a href="' + entry['article_url'] + '">' + entry['title'] + '</a>'
 
 
-def pipelineEmails(verbose=Verbose.ERROR):
+def pipelineEmails(host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema, verbose=Verbose.ERROR):
     service = getGmailService()
     messages = get_messages(service, 'me')
-    past_requests = sql_utils.getSearchMailIDs()
-    invalid_emails = sql_utils.getInvalidEmailIDs()
+    past_requests = sql_utils.getSearchMailIDs(host=host, schema=schema, verbose=verbose)
+    invalid_emails = sql_utils.getInvalidEmailIDs(host=host, schema=schema, verbose=verbose)
     request_emails = []
     for m in messages['messages']:
         if m['id'] not in past_requests and m['id'] not in invalid_emails:
@@ -329,18 +335,20 @@ def pipelineEmails(verbose=Verbose.ERROR):
             if 'no-reply' in values['from']:
                 sql_utils.insertEntry(models.InvalidEmail(
                     gmail_request_uuid=m['id'],
-                    customer_uuid=sql_utils.getOrSetCustomerID(request_email_i),
+                    customer_uuid=sql_utils.getOrSetCustomerID(request_email_i, host=host, schema=schema, 
+                                                               verbose=verbose),
                     status='NO-REPLY sender'
-                ))
+                ), host=host, schema=schema, verbose=verbose)
             elif values['from'] == SENDER_EMAIL:
                 sql_utils.insertEntry(models.InvalidEmail(
                     gmail_request_uuid=m['id'],
-                    customer_uuid=sql_utils.getOrSetCustomerID(request_email_i),
+                    customer_uuid=sql_utils.getOrSetCustomerID(request_email_i, host=host, schema=schema,
+                                                               verbose=verbose),
                     status='SELF sender'
-                ))
+                ), host=host, schema=schema, verbose=verbose)
             else:
                 request_emails.append(values)
-    count = answer_emails(request_emails, verbose=verbose)
+    count = answer_emails(request_emails, host=host, schema=schema, verbose=verbose)
     if verbose <= Verbose.INFO:
         print("Answered Email Count:", count)
     return count
