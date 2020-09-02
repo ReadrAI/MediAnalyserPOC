@@ -277,14 +277,14 @@ def __pipelineNewsAPI(source_name, file_name, url=None, loadDisk=False, fetchSou
     return importNewsAPIArticles(articles, source_name, schema=schema, host=host, verbose=verbose)
 
 
-def __feedImporter(feed_data, feed, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema, 
+def __feedImporter(feed_data, feed, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema,
                    verbose=Verbose.ERROR):
     if 'entries' not in feed_data:
         raise ValueError("No entries in feed for", feed.feed_url)
     if 'status' not in feed_data:
         if verbose <= Verbose.INFO:
-            print("No status in feed for %s" % feed.feed_url)
-        raise ValueError("No status in feed for %s" % feed.feed_url)
+            print("No status in feed for %s:%s" % (feed.source.source_name, feed.feed_url))
+        raise ValueError("No status in feed for %s:%s" % (feed.source.source_name, feed.feed_url))
     count = 0
     for a in feed_data['entries']:
         try:
