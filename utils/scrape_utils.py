@@ -183,7 +183,7 @@ def __fetchNewsAPI(content_type, url, verbose=Verbose.ERROR):
     page = 1
     content = []
     while True:
-        if verbose <= Verbose.DEBUG:
+        if verbose <= Verbose.INFO:
             print("Fetching", url % page)
         response = requests.get(url % page)
         json_response = response.json()
@@ -282,7 +282,7 @@ def __feedImporter(feed_data, feed, host=sql_utils.Host.G_CLOUD_SSL, schema=mode
     if 'entries' not in feed_data:
         raise ValueError("No entries in feed for", feed.feed_url)
     if 'status' not in feed_data:
-        if verbose <= Verbose.DEBUG:
+        if verbose <= Verbose.INFO:
             print("No status in feed for %s" % feed.feed_url)
         raise ValueError("No status in feed for %s" % feed.feed_url)
     count = 0
@@ -310,7 +310,7 @@ def importAllFeeds(host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema, verbos
     n_imported = 0
     feeds = sql_utils.getRSSFeeds(host=host, schema=schema, verbose=verbose)
     for feed_i in feeds:
-        if verbose <= Verbose.DEBUG:
+        if verbose <= Verbose.INFO:
             print("Parsing feed %s" % feed_i.feed_url)
         data = feedparser.parse(feed_i.feed_url)
         try:
