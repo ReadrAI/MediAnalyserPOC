@@ -4,6 +4,7 @@ Machine Learning models creation and usage function
 
 import gensim
 import spacy
+import logging
 
 import numpy as np
 import pandas as pd
@@ -13,7 +14,6 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 
 from utils import models
 from utils import sql_utils
-from utils.verbose import Verbose
 from utils.data_manager import DataManager
 
 nlp = spacy.load('en_core_web_sm')
@@ -46,16 +46,16 @@ def cleanText(text, to_remove=['PUNCT', 'PRON', 'SYM', 'NUM', 'ADP']):
 
 
 def createArticleDictionnary(attributes=list(w2v_attributes.keys()), host=sql_utils.Host.G_CLOUD_SSL,
-                             schema=models.schema, verbose=Verbose.ERROR):
+                             schema=models.schema):
     query = sql_utils.getRawArticlesQuery(host=host, schema=schema)
     df = pd.read_sql(query.statement, query.session.bind)
     news_dict = {}
     progress = 0
     for i, article in df.iterrows():
         p = int(i / df.shape[0] * 100)
-        if p > progress and p % 10 == 0 and verbose <= Verbose.INFO:
+        if p > progress and p % 10 == 0:
             progress = p
-            print("%d" % progress, "%")
+            logging.info(("%d" % progress) + "%")
         article_uuid = str(article.article_uuid)
         news_dict[article_uuid] = {}
         for attribute_i in attributes:
@@ -123,15 +123,14 @@ def createKNNModel(attributes=list(w2v_attributes.keys()), neighbors=5):
     DataManager.setModel(Models.KNN, neighbours)
 
 
-def createNlpModels(attributes=list(w2v_attributes.keys()), schema=models.schema, host=sql_utils.Host.G_CLOUD_SSL,
-                    verbose=Verbose.ERROR):
+def createNlpModels(attributes=list(w2v_attributes.keys()), schema=models.schema, host=sql_utils.Host.G_CLOUD_SSL):
     createArticleDictionnary(host=host, schema=schema)
     createWord2VectorModel(attributes=attributes)
     createNewsVectors(attributes=attributes)
     createKNNModel(attributes=attributes)
 
 
-def getTextEmbedding(search_text, attribute, verbose=Verbose.ERROR):
+def getTextEmbedding(search_text, attribute):
 
     news_vect = DataManager.getModel(Models.NEWS_VECT)
 
@@ -150,8 +149,7 @@ def getTextEmbedding(search_text, attribute, verbose=Verbose.ERROR):
                 embedding += DataManager.getModel(Models.W2V).wv.get_vector(word)
                 word_count += 1
             except KeyError:
-                if verbose <= Verbose.ERROR:
-                    print('Word not found:', word)
+                logging.error('Word not found: ' + word)
 
     if word_count > 0:
         return embedding / word_count
@@ -160,7 +158,7 @@ def getTextEmbedding(search_text, attribute, verbose=Verbose.ERROR):
 
 
 def getSimilarArticlesFromText(search_text, attribute='title', nb_articles=10, schema=models.schema,
-                               host=sql_utils.Host.G_CLOUD_SSL, verbose=Verbose.ERROR):
+                               host=sql_utils.Host.G_CLOUD_SSL):
     news_index = DataManager.getModel(Models.NEWS_INDEX)
     neighbours = DataManager.getModel(Models.KNN)
     embedding = getTextEmbedding(search_text, attribute)
@@ -171,7 +169,7 @@ def getSimilarArticlesFromText(search_text, attribute='title', nb_articles=10, s
         similar_articles[news_index[j]] = {}
         similar_articles[news_index[j]]['distance'] = neighbour_articles[0][0][i]
     article_uuids = list(similar_articles.keys())
-    query = sql_utils.getArticleData(article_uuids, host=host, schema=schema, verbose=verbose)
+    query = sql_utils.getArticleData(article_uuids, host=host, schema=schema)
     similar_article_details = pd.read_sql(query.statement, query.session.bind)
     similar_article_details['article_uuid'] = similar_article_details['article_uuid'].astype(str)
     similar_articles_df = pd.DataFrame(similar_articles).T

@@ -3,6 +3,7 @@ Util functions for postgres connections and sql
 """
 
 import os
+import logging
 from os.path import expanduser
 import psycopg2
 import sqlalchemy
@@ -10,7 +11,6 @@ from sqlalchemy.orm import sessionmaker
 from urllib.parse import urlparse
 
 from utils import models
-from utils.verbose import Verbose
 
 
 class Host:
@@ -23,13 +23,13 @@ class Host:
         database = "media"
 
         @classmethod
-        def createEngine(cls, connect_args, verbose=Verbose.ERROR):
+        def createEngine(cls, connect_args):
             homeDir = expanduser("~")
             connect_args["sslmode"] = "require"
             connect_args["sslcert"] = homeDir + os.sep + ".postgresql/postgresql.crt"
             connect_args["sslkey"] = homeDir + os.sep + ".postgresql/postgresql.key"
             connect_args["sslrootcert"] = homeDir + os.sep + ".postgresql/root.crt"
-            return sqlalchemy.create_engine(getDBURLFromHost(cls, verbose=verbose), connect_args=connect_args)
+            return sqlalchemy.create_engine(getDBURLFromHost(cls), connect_args=connect_args)
 
     class LOCAL_JEAN:
         name = "jean_localhost"
@@ -40,25 +40,25 @@ class Host:
         database = "media"
 
         @classmethod
-        def createEngine(cls, connect_args, verbose=Verbose.ERROR):
-            return sqlalchemy.create_engine(getDBURLFromHost(cls, verbose=verbose), connect_args=connect_args)
+        def createEngine(cls, connect_args):
+            return sqlalchemy.create_engine(getDBURLFromHost(cls), connect_args=connect_args)
 
 
-def getDBUrl(username, password, database, host, port, params={}, verbose=Verbose.ERROR):
+def getDBUrl(username, password, database, host, port, params={}):
     return 'postgres://' + username + ':' + password + '@' + host + ':' + str(port) + '/' + database
 
 
-def getDBURLFromHost(host, verbose=Verbose.ERROR):
+def getDBURLFromHost(host):
     username = host.username
     password = host.password
     host_address = host.host
     port = host.port
     database = host.database
-    return getDBUrl(username, password, database, host_address, port, verbose=verbose)
+    return getDBUrl(username, password, database, host_address, port)
 
 
 # This function should not be called outside of sql_utils.
-def getEngine(connect_args={}, host=Host.G_CLOUD_SSL, schema=models.schema, verbose=Verbose.ERROR):
+def getEngine(connect_args={}, host=Host.G_CLOUD_SSL, schema=models.schema):
     global engines
     try:
         engines
@@ -71,50 +71,49 @@ def getEngine(connect_args={}, host=Host.G_CLOUD_SSL, schema=models.schema, verb
             if 'options' not in connect_args:
                 connect_args['options'] = ''
             connect_args['options'] = connect_args['options'] + '-csearch_path=' + schema
-        engines[host.name][schema] = host.createEngine(connect_args, verbose=verbose)
+        engines[host.name][schema] = host.createEngine(connect_args)
     return engines[host.name][schema]
 
 
 # This function should not be called outside of sql_utils.
-def getDBSession(host=Host.G_CLOUD_SSL, schema=models.schema, verbose=Verbose.ERROR):
+def getDBSession(host=Host.G_CLOUD_SSL, schema=models.schema):
     global sessions
     try:
         sessions
     except (NameError, UnboundLocalError):
         sessions = {}
     if schema not in sessions:
-        Session = sessionmaker(bind=getEngine(host=host, schema=schema, verbose=verbose))
+        Session = sessionmaker(bind=getEngine(host=host, schema=schema))
         sessions[schema] = Session()
     return sessions[schema]
 
 
-def dropAllTables(host=Host.G_CLOUD_SSL, schema=models.schema, verbose=Verbose.ERROR):
+def dropAllTables(host=Host.G_CLOUD_SSL, schema=models.schema):
     if False:
-        meta = sqlalchemy.MetaData(getEngine(host=host, schema=schema, verbose=verbose))
+        meta = sqlalchemy.MetaData(getEngine(host=host, schema=schema))
         meta.reflect()
         meta.drop_all()
     else:
         raise NotImplementedError
 
 
-def getArticle(url, host=Host.G_CLOUD_SSL, schema=models.schema, verbose=Verbose.ERROR):
-    return getDBSession(host=host, schema=schema, verbose=verbose).query(models.Article)\
+def getArticle(url, host=Host.G_CLOUD_SSL, schema=models.schema):
+    return getDBSession(host=host, schema=schema).query(models.Article)\
         .filter(models.Article.article_url == url).first()
 
 
-def getSource(name, host=Host.G_CLOUD_SSL, schema=models.schema, verbose=Verbose.ERROR):
+def getSource(name, host=Host.G_CLOUD_SSL, schema=models.schema):
     sources = getDBSession(host=host, schema=schema).query(
         models.Source).filter(models.Source.source_name == name).all()
     if len(sources) > 1:
-        if verbose <= Verbose.WARNING:
-            print("Warning: multiple sources matching name", name)
-            print("Possible matches", [x['source_name'] for x in sources])
+        logging.warning("Warning: multiple sources matching name " + name)
+        logging.warning("Possible matches " + [x['source_name'] for x in sources])
     elif len(sources) == 0:
         return None
     return sources[0]
 
 
-def getSourceFromUrl(url, host=Host.G_CLOUD_SSL, schema=models.schema, verbose=Verbose.ERROR):
+def getSourceFromUrl(url, host=Host.G_CLOUD_SSL, schema=models.schema):
 
     def getStem(to_stem):
         return urlparse(to_stem).netloc.split('.')[-2]
@@ -126,21 +125,20 @@ def getSourceFromUrl(url, host=Host.G_CLOUD_SSL, schema=models.schema, verbose=V
         for source_i in sources:
             if getStem(source_i.source_url) == stem and stem != '':
                 return source_i
-        if verbose <= Verbose.WARNING:
-            print("Warning: multiple sources matching url", url)
-            print("Possible matches", [x['source_name'] for x in sources])
+        logging.warning("Warning: multiple sources matching url", url)
+        logging.warning("Possible matches " + [x['source_name'] for x in sources])
         return sources[0]
     elif len(sources) == 0:
         return None
     return sources[0]
 
 
-def getSearch(gmail_request_uuid, host=Host.G_CLOUD_SSL, schema=models.schema, verbose=Verbose.ERROR):
+def getSearch(gmail_request_uuid, host=Host.G_CLOUD_SSL, schema=models.schema):
     return getDBSession(host=host, schema=schema).query(models.ArticleSearch)\
         .filter(models.ArticleSearch.gmail_request_uuid == gmail_request_uuid).first()
 
 
-def getSourceID(name, host=Host.G_CLOUD_SSL, schema=models.schema, verbose=Verbose.ERROR):
+def getSourceID(name, host=Host.G_CLOUD_SSL, schema=models.schema):
     source = getSource(name, host=host, schema=schema)
     if source is None:
         return None
@@ -148,7 +146,7 @@ def getSourceID(name, host=Host.G_CLOUD_SSL, schema=models.schema, verbose=Verbo
         return str(source.source_uuid)
 
 
-def getOrSetSourceID(name, url, host=Host.G_CLOUD_SSL, schema=models.schema, verbose=Verbose.ERROR):
+def getOrSetSourceID(name, url, host=Host.G_CLOUD_SSL, schema=models.schema):
     source_uuid = getSourceID(name, host=host, schema=schema)
     if source_uuid is None:
         url_stem = urlparse(url).netloc
@@ -160,12 +158,11 @@ def getOrSetSourceID(name, url, host=Host.G_CLOUD_SSL, schema=models.schema, ver
             ))
             source_uuid = getSourceID(name, host=host, schema=schema)
         else:
-            if verbose <= Verbose.ERROR:
-                print("Could not add source %s with url %s: stem is %s." % (name, url, url_stem))
+            logging.error("Could not add source %s with url %s: stem is %s." % (name, url, url_stem))
     return source_uuid
 
 
-def getCustomerID(email, host=Host.G_CLOUD_SSL, schema=models.schema, verbose=Verbose.ERROR):
+def getCustomerID(email, host=Host.G_CLOUD_SSL, schema=models.schema):
     customer_uuid = getDBSession(host=host, schema=schema).query(models.Customer.customer_uuid)\
         .filter(models.Customer.customer_email == email).first()
     if customer_uuid is None:
@@ -174,25 +171,25 @@ def getCustomerID(email, host=Host.G_CLOUD_SSL, schema=models.schema, verbose=Ve
         return customer_uuid[0]
 
 
-def getOrSetCustomerID(email, host=Host.G_CLOUD_SSL, schema=models.schema, verbose=Verbose.ERROR):
-    customer_uuid = getCustomerID(email, host=host, schema=schema, verbose=verbose)
+def getOrSetCustomerID(email, host=Host.G_CLOUD_SSL, schema=models.schema):
+    customer_uuid = getCustomerID(email, host=host, schema=schema)
     if customer_uuid is None:
         insertEntry(models.Customer(
             customer_email=email
-        ), host=host, schema=schema, verbose=verbose)
-        customer_uuid = getCustomerID(email, host=host, schema=schema, verbose=verbose)
+        ), host=host, schema=schema)
+        customer_uuid = getCustomerID(email, host=host, schema=schema)
     return customer_uuid
 
 
-def getSearchMailIDs(host=Host.G_CLOUD_SSL, schema=models.schema, verbose=Verbose.ERROR):
+def getSearchMailIDs(host=Host.G_CLOUD_SSL, schema=models.schema):
     return [r[0] for r in getDBSession(host=host, schema=schema).query(models.ArticleSearch.gmail_request_uuid).all()]
 
 
-def getInvalidEmailIDs(host=Host.G_CLOUD_SSL, schema=models.schema, verbose=Verbose.ERROR):
+def getInvalidEmailIDs(host=Host.G_CLOUD_SSL, schema=models.schema):
     return [i[0] for i in getDBSession(host=host, schema=schema).query(models.InvalidEmail.gmail_request_uuid).all()]
 
 
-def getRawArticlesQuery(host=Host.G_CLOUD_SSL, schema=models.schema, verbose=Verbose.ERROR):
+def getRawArticlesQuery(host=Host.G_CLOUD_SSL, schema=models.schema):
     query = getDBSession(host=host, schema=schema).query(
         models.Article.article_uuid, models.Article.title,
         models.Article.description, models.ArticleContent.article_content
@@ -204,21 +201,19 @@ def getRawArticlesQuery(host=Host.G_CLOUD_SSL, schema=models.schema, verbose=Ver
     return query
 
 
-def insertEntry(entry, host=Host.G_CLOUD_SSL, schema=models.schema, verbose=Verbose.ERROR):
+def insertEntry(entry, host=Host.G_CLOUD_SSL, schema=models.schema):
     session = getDBSession(host=host, schema=schema)
     try:
         session.add(entry)
         session.commit()
         return True
     except (psycopg2.errors.UniqueViolation, sqlalchemy.exc.IntegrityError):
-        if verbose <= Verbose.WARNING:
-            print("Entry already exists for ", entry)
+        logging.warning("Entry already exists for " + entry)
         session.rollback()
         return False
 
 
-def populateFeeds(source_name, feed_url, section=None, host=Host.G_CLOUD_SSL, schema=models.schema,
-                  verbose=Verbose.ERROR):
+def populateFeeds(source_name, feed_url, section=None, host=Host.G_CLOUD_SSL, schema=models.schema):
     source_uuid = getSourceID(source_name, host=host, schema=schema)
     return insertEntry(models.RSSFeed(
         source_uuid=source_uuid,
@@ -227,24 +222,23 @@ def populateFeeds(source_name, feed_url, section=None, host=Host.G_CLOUD_SSL, sc
     ), host=Host.G_CLOUD_SSL, schema=models.schema)
 
 
-def updateSearchStatus(article_search_uuid, status, host=Host.G_CLOUD_SSL, schema=models.schema, verbose=Verbose.ERROR):
+def updateSearchStatus(article_search_uuid, status, host=Host.G_CLOUD_SSL, schema=models.schema):
     stmt = sqlalchemy.update(models.ArticleSearch)\
         .where(models.ArticleSearch.article_search_uuid == article_search_uuid)\
         .values(status=status)
     try:
         result = getEngine(host=host, schema=schema).connect().execute(stmt)
-        print("update query result", result)
+        logging.debug("update query result " + result)
         return 1
     except BaseException as e:
-        print(article_search_uuid, status, host.name, schema)
-        print(e)
+        logging.error(article_search_uuid, status, host.name, schema)
+        logging.error(e)
         return 0
     return 0
     # getDBSession(host=host, schema=schema).commit()
 
 
-def updateSearch(article_search_uuid, gmail_answer_uuid, host=Host.G_CLOUD_SSL, schema=models.schema,
-                 verbose=Verbose.ERROR):
+def updateSearch(article_search_uuid, gmail_answer_uuid, host=Host.G_CLOUD_SSL, schema=models.schema):
     stmt = sqlalchemy.update(models.ArticleSearch)\
         .where(models.ArticleSearch.article_search_uuid == article_search_uuid)\
         .values(gmail_answer_uuid=gmail_answer_uuid)
@@ -252,11 +246,11 @@ def updateSearch(article_search_uuid, gmail_answer_uuid, host=Host.G_CLOUD_SSL, 
     # getDBSession(host=host, schema=schema).commit()
 
 
-def getRSSFeeds(host=Host.G_CLOUD_SSL, schema=models.schema, verbose=Verbose.ERROR):
-    return getDBSession(host=host, schema=schema, verbose=verbose).query(models.RSSFeed).all()
+def getRSSFeeds(host=Host.G_CLOUD_SSL, schema=models.schema):
+    return getDBSession(host=host, schema=schema).query(models.RSSFeed).all()
 
 
-def getArticleData(article_uuids, host=Host.G_CLOUD_SSL, schema=models.schema, verbose=Verbose.ERROR):
+def getArticleData(article_uuids, host=Host.G_CLOUD_SSL, schema=models.schema):
     return getDBSession(host=host, schema=schema).query(
         models.Article.article_uuid,
         models.Article.title,

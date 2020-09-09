@@ -7,6 +7,7 @@ import pytz
 import pickle
 import base64
 import email
+import logging
 import os.path
 import datetime
 from email.mime.text import MIMEText
@@ -18,7 +19,6 @@ from google.auth.transport.requests import Request
 from utils import sql_utils
 from utils import data_science_utils
 from utils import scrape_utils
-from utils.verbose import Verbose
 from utils import models
 from utils.data_manager import DataManager
 
@@ -96,12 +96,9 @@ def create_draft(service, user_id, message_body):
         message = {'message': message_body}
         draft = service.users().drafts().create(userId=user_id, body=message).execute()
 
-        print("Draft id: %s\nDraft message: %s" %
-              (draft['id'], draft['message']))
-
         return draft
     except Exception as e:
-        print('An error occurred: %s' % e)
+        logging.error('An error occurred: %s' % e)
         return None
 
 
@@ -109,10 +106,9 @@ def send_message(service, user_id, message):
     try:
         message = service.users().messages().send(
             userId=user_id, body=message).execute()
-        # print('Message Id: %s' % message['id'])
         return message
     except Exception as e:
-        print('An error occurred: %s' % e)
+        logging.error('An error occurred: %s' % e)
         return None
 
 
@@ -120,29 +116,27 @@ def get_messages(service, user_id):
     try:
         return service.users().messages().list(userId=user_id).execute()
     except Exception as error:
-        print('An error occurred: %s' % error)
+        logging.error('An error occurred: %s' % error)
 
 
 def get_message(service, user_id, msg_id):
     try:
         return service.users().messages().get(userId=user_id, id=msg_id, format='full').execute()
     except Exception as error:
-        print('An error occurred: %s' % error)
+        logging.error('An error occurred: %s' % error)
 
 
 def get_mime_message(service, user_id, msg_id):
     try:
         message = service.users().messages().get(userId=user_id, id=msg_id,
                                                  format='raw').execute()
-        print('Message snippet: %s' % message['snippet'])
-        print('Message keys: %s' % message.keys())
         msg_str = base64.urlsafe_b64decode(
             message['raw'].encode("utf-8")).decode("utf-8")
         mime_msg = email.message_from_string(msg_str)
 
         return mime_msg
     except Exception as error:
-        print('An error occurred: %s' % error)
+        logging.error('An error occurred: %s' % error)
 
 
 def get_attachments(service, user_id, msg_id, store_dir):
@@ -161,22 +155,29 @@ def get_attachments(service, user_id, msg_id, store_dir):
                 f.write(file_data)
                 f.close()
     except Exception as error:
-        print('An error occurred: %s' % error)
+        logging.error('An error occurred: %s' % error)
 
 
 def getMessageContent(message):
     service = getGmailService()
-    raw = get_message(service, 'me', message['id'])
     values = {}
-    for entry in raw['payload']['headers']:
-        values[entry['name'].lower()] = entry['value']
-
-    values['snippet'] = raw['snippet']
-    if 'parts' in raw['payload']:
-        values['content'] = decode(raw['payload']['parts'][0]['body']['data'])
-    if 'data' in raw['payload']['body']:
-        values['content'] = decode(raw['payload']['body']['data'])
     values['id'] = message['id']
+    raw = get_message(service, 'me', message['id'])
+    if raw is not None:
+        if 'payload' in raw:
+            if 'headers' in raw['payload']:
+                for entry in raw['payload']['headers']:
+                    values[entry['name'].lower()] = entry['value']
+
+            if 'parts' in raw['payload'] and len(raw['payload']['parts']) > 0 and 'body' in raw['payload']['parts'][0]\
+                    and 'data' in raw['payload']['parts'][0]['body']:
+                values['content'] = decode(raw['payload']['parts'][0]['body']['data'])
+            elif 'body' in raw and 'data' in raw['payload']['body']:
+                values['content'] = decode(raw['payload']['body']['data'])
+            else:
+                values['content'] = ''
+        if 'snippet' in raw:
+            values['snippet'] = raw['snippet']
     return values
 
 
@@ -198,38 +199,35 @@ def parse_email(email_tag):
         return email_tag
 
 
-def downloadArticle(article_search, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema, verbose=Verbose.ERROR):
-    sources = sql_utils.getSourceFromUrl(article_search.search_url, host=host, schema=schema, verbose=verbose)
+def downloadArticle(article_search, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
+    sources = sql_utils.getSourceFromUrl(article_search.search_url, host=host, schema=schema)
     if len(sources) == 0:
-        if verbose <= Verbose.ERROR:
-            print('FAILURE: Source not found', article_search.article_search_uuid)
+        logging.error('FAILURE: Source not found ' + article_search.article_search_uuid)
         sql_utils.updateSearchStatus(article_search.article_search_uuid, 'FAILURE: Source not found', host=host,
-                                     schema=schema, verbose=verbose)
+                                     schema=schema)
         return None
     else:
         if len(sources) == 1:
             source = sources[0]
         else:
-            if verbose <= Verbose.ERROR:
-                print('FAILURE: Source domain not found', article_search.article_search_uuid)
+            logging.error('FAILURE: Source domain not found ' + article_search.article_search_uuid)
             return None
             # Code not functional. TODO fix and add back
 
             # path_elements = urlparse(article_search.search_url).path.split('/')
             # sources = getSourceFromUrl(article_search.search_url)
 
-            # print(path_elements)
+            # logging.debug(path_elements)
             # for element in path_elements:
             #     if element != '':
-            #         print(sources)
+            #         logging.debug(sources)
             #         sources = [s for s in sources if element in s.website_url]
             #         if len(sources) <= 1:
             #             break
             # if len(sources) == 0:  # eliminated too many sources, should not happen
             #     sql_utils.updateSearchStatus(article_search.article_search_uuid, 'FAILURE: Source domain not found',
-            #                                  host=host, schema=schema, verbose=verbose)
-            #     if verbose <= Verbose.ERROR:
-            #         print('FAILURE: Source domain not found', article_search.article_search_uuid)
+            #                                  host=host, schema=schema)
+            #     logging.error('FAILURE: Source domain not found ' + article_search.article_search_uuid)
             #     return None
             # else:
             #     source = sources[0]
@@ -243,8 +241,8 @@ def downloadArticle(article_search, host=sql_utils.Host.G_CLOUD_SSL, schema=mode
             " ".join(search_elements),
             source.source_name.lower().replace(" ", "-"),
             fetchSource=True,
-            host=host, schema=schema, verbose=verbose)
-        articles = sql_utils.getArticle(article_search.search_url, host=host, schema=schema, verbose=verbose)
+            host=host, schema=schema)
+        articles = sql_utils.getArticle(article_search.search_url, host=host, schema=schema)
         if len(articles) == 0:
             # could not find article easily
             # TODO add scraping procedure
@@ -253,65 +251,57 @@ def downloadArticle(article_search, host=sql_utils.Host.G_CLOUD_SSL, schema=mode
             return articles[0]
 
 
-def answer_emails(request_emails, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema, verbose=Verbose.ERROR):
+def answer_emails(request_emails, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
     count = 0
     for request_i in request_emails:
-        if verbose <= Verbose.DEBUG:
-            print("### Article search for article %s at" % request_i['subject'], getCurrentTimestamp())
-        if verbose <= Verbose.INFO:
-            print("Processing request", request_i['id'])
-            print("Subject:", request_i['subject'])
-            print("Content:", request_i['content'])
+        logging.debug("### Article search for article %s at " % request_i['subject'] + getCurrentTimestamp())
+        logging.info("Processing request " + request_i['id'])
+        logging.info("Subject: " + request_i['subject'])
+        logging.info("Content: " + request_i['content'])
         requester_email = parse_email(request_i['from'])
-        if verbose <= Verbose.DEBUG:
-            print("### Customer ID search at", getCurrentTimestamp())
-        customer_uuid = sql_utils.getOrSetCustomerID(requester_email, host=host, schema=schema, verbose=verbose)
+        logging.debug("### Customer ID search at " + getCurrentTimestamp())
+        customer_uuid = sql_utils.getOrSetCustomerID(requester_email, host=host, schema=schema)
         search_url = getUrlFromText(request_i['subject'])
         if search_url is None:
             search_url = getUrlFromText(request_i['content'])
-        if verbose <= Verbose.DEBUG:
-            print("### Inserting search entry at", getCurrentTimestamp())
+        logging.debug("### Inserting search entry at " + getCurrentTimestamp())
         if search_url is None:
-            if verbose <= Verbose.ERROR:
-                print("No URL found for message %s: %s\n %s\n" % (
+            logging.error("No URL found for message %s: %s\n %s\n" % (
                         request_i['id'], request_i['subject'], request_i['content']))
+            logging.debug(customer_uuid + " " + str(customer_uuid) + " " + type(customer_uuid))
             sql_utils.insertEntry(models.ArticleSearch(
                 gmail_request_uuid=request_i['id'],
-                customer_uuid=customer_uuid,
+                customer_uuid=str(customer_uuid),
                 status='FAILURE: missing URL'
-            ), host=host, schema=schema, verbose=verbose)
+            ), host=host, schema=schema)
             continue
         success = sql_utils.insertEntry(models.ArticleSearch(
             gmail_request_uuid=request_i['id'],
             search_url=search_url,
             customer_uuid=customer_uuid,
-        ), host=host, schema=schema, verbose=verbose)
+        ), host=host, schema=schema)
         if not success:
-            if verbose <= Verbose.WARNING:
-                print("Could not insert search for entry %s" % request_i['id'])
+            logging.error("Could not insert search for entry %s" % request_i['id'])
             continue
         else:
-            if verbose <= Verbose.DEBUG:
-                print("### Getting article search at", getCurrentTimestamp())
-            article_search = sql_utils.getSearch(request_i['id'], host=host, schema=schema, verbose=verbose)
-            # print(article_search)
-            # print(article_search.search_url)
-            # print(str(article_search.search_url))
+            logging.error("### Getting article search at " + getCurrentTimestamp())
+            article_search = sql_utils.getSearch(request_i['id'], host=host, schema=schema)
+            # logging.debug(article_search)
+            # logging.debug(article_search.search_url)
+            # logging.debug(str(article_search.search_url))
             search_article = article_search.article
             # search_article = sql_utils.getArticle(article_search.search_url, host=host, schema=schema,
             #                                       verbose=verbose)
             if search_article is None:
                 # broken code, add when fixed
-                # search_article = downloadArticle(article_search, host=host, schema=schema, verbose=verbose)
+                # search_article = downloadArticle(article_search, host=host, schema=schema)
                 if search_article is None:
-                    if verbose <= Verbose.ERROR:
-                        print('FAILURE: Article not found', article_search.article_search_uuid)
+                    logging.error('FAILURE: Article not found ' + article_search.article_search_uuid)
                     sql_utils.updateSearchStatus(article_search.article_search_uuid, 'FAILURE: Article not found',
-                                                 host=host, schema=schema, verbose=verbose)
+                                                 host=host, schema=schema)
                     continue
             search_attribute = 'title'
-            if verbose <= Verbose.DEBUG:
-                print("### Starting similarity search at", getCurrentTimestamp())
+            logging.debug("### Starting similarity search at " + getCurrentTimestamp())
             result = data_science_utils.getSimilarArticlesFromText(
                 search_article.title if search_attribute == 'title' else search_article.description,
                 search_attribute, article_search.n_results)
@@ -324,19 +314,16 @@ def answer_emails(request_emails, host=sql_utils.Host.G_CLOUD_SSL, schema=models
                 "Your News search is ready.",
                 plain_text,
                 html_text)
-            if verbose <= Verbose.DEBUG:
-                print("### Sending answer email at", getCurrentTimestamp())
+            logging.debug("### Sending answer email at " + getCurrentTimestamp())
             sent_message = send_message(service, 'me', message)
-            if verbose <= Verbose.DEBUG:
-                print("### Seting article search status at", getCurrentTimestamp())
+            logging.debug("### Seting article search status at " + getCurrentTimestamp())
             if sent_message is None:
                 sql_utils.updateSearchStatus(article_search.article_search_uuid, 'FAILURE: Message not sent', host=host,
-                                             schema=schema, verbose=verbose)
+                                             schema=schema)
             else:
                 count += sql_utils.updateSearchStatus(article_search.article_search_uuid, 'SUCCESS', host=host,
-                                                      schema=schema, verbose=verbose)
-                sql_utils.updateSearch(article_search.article_search_uuid, sent_message['id'], host=host, schema=schema,
-                                       verbose=verbose)
+                                                      schema=schema)
+                sql_utils.updateSearch(article_search.article_search_uuid, sent_message['id'], host=host, schema=schema)
     return count
 
 
@@ -344,24 +331,16 @@ def __addUrlLinks(entry):
     return '<a href="' + entry['article_url'] + '">' + entry['title'] + '</a>'
 
 
-def pipelineEmails(host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema, verbose=Verbose.ERROR):
-    if verbose <= Verbose.DEBUG:
-        print("### Email pipeline started at",
-              getCurrentTimestamp())
+def pipelineEmails(host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
+    logging.debug("### Email pipeline started at " + getCurrentTimestamp())
     service = getGmailService()
     messages = get_messages(service, 'me')
-    if verbose <= Verbose.DEBUG:
-        print("### Past request loading at",
-              getCurrentTimestamp())
-    past_requests = sql_utils.getSearchMailIDs(host=host, schema=schema, verbose=verbose)
-    if verbose <= Verbose.DEBUG:
-        print("### Invalid email loading at",
-              getCurrentTimestamp())
-    invalid_emails = sql_utils.getInvalidEmailIDs(host=host, schema=schema, verbose=verbose)
-    if verbose <= Verbose.DEBUG:
-        print("### New emails fetching at",
-              getCurrentTimestamp())
-        print("### %d emails to fetch" % len(messages['messages']))
+    logging.debug("### Past request loading at " + getCurrentTimestamp())
+    past_requests = sql_utils.getSearchMailIDs(host=host, schema=schema)
+    logging.debug("### Invalid email loading at " + getCurrentTimestamp())
+    invalid_emails = sql_utils.getInvalidEmailIDs(host=host, schema=schema)
+    logging.debug("### New emails fetching at " + getCurrentTimestamp())
+    logging.debug("### %d emails to fetch" % len(messages['messages']))
     request_emails = []
     for m in messages['messages']:
         if m['id'] not in past_requests and m['id'] not in invalid_emails:
@@ -370,27 +349,21 @@ def pipelineEmails(host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema, verbos
             if 'no-reply' in values['from']:
                 sql_utils.insertEntry(models.InvalidEmail(
                     gmail_request_uuid=m['id'],
-                    customer_uuid=sql_utils.getOrSetCustomerID(request_email_i, host=host, schema=schema,
-                                                               verbose=verbose),
+                    customer_uuid=sql_utils.getOrSetCustomerID(request_email_i, host=host, schema=schema),
                     status='NO-REPLY sender'
-                ), host=host, schema=schema, verbose=verbose)
+                ), host=host, schema=schema)
             elif values['from'] == SENDER_EMAIL:
                 sql_utils.insertEntry(models.InvalidEmail(
                     gmail_request_uuid=m['id'],
-                    customer_uuid=sql_utils.getOrSetCustomerID(request_email_i, host=host, schema=schema,
-                                                               verbose=verbose),
+                    customer_uuid=sql_utils.getOrSetCustomerID(request_email_i, host=host, schema=schema),
                     status='SELF sender'
-                ), host=host, schema=schema, verbose=verbose)
+                ), host=host, schema=schema)
             else:
                 request_emails.append(values)
-    if verbose <= Verbose.DEBUG:
-        print("### Starting to answer emails at",
-              getCurrentTimestamp())
-    count = answer_emails(request_emails, host=host, schema=schema, verbose=verbose)
-    if verbose <= Verbose.DEBUG:
-        print("### Email pipeline done at", getCurrentTimestamp())
-    if verbose <= Verbose.INFO:
-        print("Answered Email Count:", count)
+    logging.debug("### Starting to answer emails at " + getCurrentTimestamp())
+    count = answer_emails(request_emails, host=host, schema=schema)
+    logging.debug("### Email pipeline done at " + getCurrentTimestamp())
+    logging.info("Answered Email Count: " + count)
     return count
 
 
