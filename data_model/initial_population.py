@@ -1,7 +1,6 @@
 from utils import sql_utils
 from utils.sql_utils import populateFeeds
 from utils import models
-from utils.verbose import Verbose
 
 
 oan_rss_feeds = [
@@ -804,22 +803,21 @@ feed_list_list = [
 ]
 
 
-def populateAllFeeds(verbose=Verbose.ERROR):
+def populateAllFeeds():
     count = 0
-    count += populateVariousFeeds(verbose=verbose)
+    count += populateVariousFeeds()
     for name, feed_list in feed_list_list:
-        count += populateFeedList(name, feed_list, verbose=verbose)
+        count += populateFeedList(name, feed_list)
     return count
 
 
-def populateFeedList(name, rss_feeds, verbose=Verbose.ERROR):
+def populateFeedList(name, rss_feeds):
     count = 0
     for section in rss_feeds:
         count += populateFeeds(
             name,
             section[1],
-            section[0],
-            verbose=verbose)
+            section[0])
     return count
 
 
@@ -833,53 +831,51 @@ def populateNYTFeeds():
     return count
 
 
-def populateVariousFeeds(verbose=Verbose.ERROR):
+def populateVariousFeeds():
     count = 0
     # for more reddit feeds:
     # https://www.reddit.com/r/rss/comments/gxsmq4/news_feeds/
     # https://feeder.co/knowledge-base/rss-feed-creation/reddit-rss/
-    count += populateFeeds('Reddit', 'https://www.reddit.com/r/worldnews/.rss', 'World News', verbose=verbose)
+    count += populateFeeds('Reddit', 'https://www.reddit.com/r/worldnews/.rss', 'World News')
     # TODO: add http://feeds.reuters.com/reuters/topnews when DNS error is gone
     # https://blog.feedspot.com/reuters_rss_feeds/
     count += populateFeeds('Thomson Reuters', 'https://ir.thomsonreuters.com/rss/news-releases.xml?items=100',
-                           'Finance', verbose=verbose)
-    count += populateFeeds('Al Jazeera', 'https://www.aljazeera.com/xml/rss/all.xml', 'Headlines', verbose=verbose)
-    count += populateFeeds('Defense Blog', 'http://defence-blog.com/feed', "Defense", verbose=verbose)
-    count += populateFeeds('E-International Relations', 'https://www.e-ir.info/feed/', verbose=verbose)
-    count += populateFeeds('Global Issues', 'http://www.globalissues.org/news/feed', verbose=verbose)
-    count += populateFeeds('The Cipher Brief', 'https://www.thecipherbrief.com/feed', verbose=verbose)
+                           'Finance')
+    count += populateFeeds('Al Jazeera', 'https://www.aljazeera.com/xml/rss/all.xml', 'Headlines')
+    count += populateFeeds('Defense Blog', 'http://defence-blog.com/feed', "Defense")
+    count += populateFeeds('E-International Relations', 'https://www.e-ir.info/feed/')
+    count += populateFeeds('Global Issues', 'http://www.globalissues.org/news/feed')
+    count += populateFeeds('The Cipher Brief', 'https://www.thecipherbrief.com/feed')
     count += populateFeeds('WorldNewsSuperFast',
-                           'https://worldnewssuperfast.blogspot.com/feeds/posts/default?alt=rss', verbose=verbose)
-    count += populateFeeds('Times of India', 'https://timesofindia.indiatimes.com/rssfeeds/296589292.cms',
-                           verbose=verbose)
-    count += populateFeeds('NPR', 'https://feeds.npr.org/1004/rss.xml', 'World', verbose=verbose)
-    count += populateFeeds('NPR', 'https://feeds.npr.org/510355/podcast.xml', 'Consider This', verbose=verbose)
-    count += populateFeeds('NPR', 'https://feeds.npr.org/2/rss.xml', 'All Things Considered', verbose=verbose)
-    count += populateFeeds('NPR', 'https://feeds.npr.org/3/rss.xml', 'Morning Edition', verbose=verbose)
-    count += populateFeeds('NPR', 'https://feeds.npr.org/4/rss.xml', 'Performance Today', verbose=verbose)
-    count += populateFeeds('NPR', 'https://feeds.npr.org/5/rss.xml', 'Talk of the Nation', verbose=verbose)
-    count += populateFeeds('NPR', 'https://feeds.npr.org/7/rss.xml', 'Weekend Edition Saturday', verbose=verbose)
-    count += populateFeeds('NPR', 'https://feeds.npr.org/10/rss.xml', 'Weekend Edition Sunday', verbose=verbose)
-    count += populateFeeds('NPR', 'https://feeds.npr.org/11/rss.xml', 'News & Notes', verbose=verbose)
-    count += populateFeeds('NPR', 'https://feeds.npr.org/13/rss.xml', 'Fresh Air', verbose=verbose)
-    count += populateFeeds('NPR', 'https://feeds.npr.org/14/rss.xml', 'The Tavis Smiley Show', verbose=verbose)
-    count += populateFeeds('NPR', 'https://feeds.npr.org/15/rss.xml', 'The Motley Fool', verbose=verbose)
-    count += populateFeeds('NPR', 'https://feeds.npr.org/22/rss.xml', 'Latino USA', verbose=verbose)
-    count += populateFeeds('Sputnik News', 'https://sputniknews.com/export/rss2/world/index.xml', 'Headlines',
-                           verbose=verbose)
-    count += populateFeeds('', '', '', verbose=verbose)
-    count += populateFeeds('', '', '', verbose=verbose)
-    count += populateFeeds('', '', '', verbose=verbose)
-    count += populateFeeds('', '', '', verbose=verbose)
-    count += populateFeeds('', '', '', verbose=verbose)
-    count += populateFeeds('', '', '', verbose=verbose)
-    count += populateFeeds('', '', '', verbose=verbose)
-    count += populateFeeds('', '', '', verbose=verbose)
-    count += populateFeeds('', '', '', verbose=verbose)
-    count += populateFeeds('', '', '', verbose=verbose)
-    count += populateFeeds('', '', '', verbose=verbose)
-    count += populateFeeds('', '', '', verbose=verbose)
-    count += populateFeeds('', '', '', verbose=verbose)
+                           'https://worldnewssuperfast.blogspot.com/feeds/posts/default?alt=rss')
+    count += populateFeeds('Times of India', 'https://timesofindia.indiatimes.com/rssfeeds/296589292.cms')
+    count += populateFeeds('NPR', 'https://feeds.npr.org/1004/rss.xml', 'World')
+    count += populateFeeds('NPR', 'https://feeds.npr.org/510355/podcast.xml', 'Consider This')
+    count += populateFeeds('NPR', 'https://feeds.npr.org/2/rss.xml', 'All Things Considered')
+    count += populateFeeds('NPR', 'https://feeds.npr.org/3/rss.xml', 'Morning Edition')
+    count += populateFeeds('NPR', 'https://feeds.npr.org/4/rss.xml', 'Performance Today')
+    count += populateFeeds('NPR', 'https://feeds.npr.org/5/rss.xml', 'Talk of the Nation')
+    count += populateFeeds('NPR', 'https://feeds.npr.org/7/rss.xml', 'Weekend Edition Saturday')
+    count += populateFeeds('NPR', 'https://feeds.npr.org/10/rss.xml', 'Weekend Edition Sunday')
+    count += populateFeeds('NPR', 'https://feeds.npr.org/11/rss.xml', 'News & Notes')
+    count += populateFeeds('NPR', 'https://feeds.npr.org/13/rss.xml', 'Fresh Air')
+    count += populateFeeds('NPR', 'https://feeds.npr.org/14/rss.xml', 'The Tavis Smiley Show')
+    count += populateFeeds('NPR', 'https://feeds.npr.org/15/rss.xml', 'The Motley Fool')
+    count += populateFeeds('NPR', 'https://feeds.npr.org/22/rss.xml', 'Latino USA')
+    count += populateFeeds('Sputnik News', 'https://sputniknews.com/export/rss2/world/index.xml', 'Headlines')
+    count += populateFeeds('', '', '')
+    count += populateFeeds('', '', '')
+    count += populateFeeds('', '', '')
+    count += populateFeeds('', '', '')
+    count += populateFeeds('', '', '')
+    count += populateFeeds('', '', '')
+    count += populateFeeds('', '', '')
+    count += populateFeeds('', '', '')
+    count += populateFeeds('', '', '')
+    count += populateFeeds('', '', '')
+    count += populateFeeds('', '', '')
+    count += populateFeeds('', '', '')
+    count += populateFeeds('', '', '')
     return count
 
 
