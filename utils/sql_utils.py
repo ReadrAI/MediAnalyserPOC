@@ -4,6 +4,7 @@ Util functions for postgres connections and sql
 
 import os
 import logging
+import datetime
 from os.path import expanduser
 import psycopg2
 import sqlalchemy
@@ -189,7 +190,7 @@ def getInvalidEmailIDs(host=Host.G_CLOUD_SSL, schema=models.schema):
     return [i[0] for i in getDBSession(host=host, schema=schema).query(models.InvalidEmail.gmail_request_uuid).all()]
 
 
-def getRawArticlesQuery(host=Host.G_CLOUD_SSL, schema=models.schema):
+def getRawArticlesQuery(n_days=None, host=Host.G_CLOUD_SSL, schema=models.schema):
     query = getDBSession(host=host, schema=schema).query(
         models.Article.article_uuid, models.Article.title,
         models.Article.description, models.ArticleContent.article_content
@@ -198,6 +199,10 @@ def getRawArticlesQuery(host=Host.G_CLOUD_SSL, schema=models.schema):
     ).outerjoin(
         models.ArticleContent, models.ArticleContent.article_uuid == models.Article.article_uuid
     )
+    if n_days is not None:
+        current_time = datetime.datetime.utcnow()
+        start = current_time - datetime.timedelta(days=n_days)
+        query = query.filter(models.Article.published_at >= start)
     return query
 
 
