@@ -169,7 +169,7 @@ def getCustomerID(email, host=Host.G_CLOUD_SSL, schema=models.schema):
     if customer_uuid is None:
         return None
     else:
-        return customer_uuid[0]
+        return str(customer_uuid[0])
 
 
 def getOrSetCustomerID(email, host=Host.G_CLOUD_SSL, schema=models.schema):
