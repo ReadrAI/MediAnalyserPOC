@@ -232,21 +232,27 @@ def updateSearchStatus(article_search_uuid, status, host=Host.G_CLOUD_SSL, schem
         .where(models.ArticleSearch.article_search_uuid == article_search_uuid)\
         .values(status=status)
     try:
-        result = getEngine(host=host, schema=schema).connect().execute(stmt)
-        logging.debug("update query result " + result)
+        getEngine(host=host, schema=schema).connect().execute(stmt)
         return 1
     except BaseException as e:
-        logging.error(article_search_uuid, status, host.name, schema)
+        logging.error(" ".join([str(article_search_uuid), status, host.name, schema]))
         logging.error(e)
         return 0
-    return 0
     # getDBSession(host=host, schema=schema).commit()
 
 
-def updateSearch(article_search_uuid, gmail_answer_uuid, host=Host.G_CLOUD_SSL, schema=models.schema):
+def updateSearchAnswer(article_search_uuid, gmail_answer_uuid, host=Host.G_CLOUD_SSL, schema=models.schema):
     stmt = sqlalchemy.update(models.ArticleSearch)\
         .where(models.ArticleSearch.article_search_uuid == article_search_uuid)\
         .values(gmail_answer_uuid=gmail_answer_uuid)
+    getEngine(host=host, schema=schema).connect().execute(stmt)
+    # getDBSession(host=host, schema=schema).commit()
+
+
+def updateSearchArticle(article_search_uuid, article_uuid, host=Host.G_CLOUD_SSL, schema=models.schema):
+    stmt = sqlalchemy.update(models.ArticleSearch)\
+        .where(models.ArticleSearch.article_search_uuid == article_search_uuid)\
+        .values(search_article=str(article_uuid))
     getEngine(host=host, schema=schema).connect().execute(stmt)
     # getDBSession(host=host, schema=schema).commit()
 

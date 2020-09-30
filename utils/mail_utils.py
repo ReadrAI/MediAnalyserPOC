@@ -22,11 +22,13 @@ from utils import scrape_utils
 from utils import models
 from utils.data_manager import DataManager
 
+logging.getLogger('googleapicliet.discovery_cache').setLevel(logging.ERROR)
 
 # If modifying these scopes, delete the file token.pickle.
 SCOPES = ['https://www.googleapis.com/auth/gmail.send',
           'https://www.googleapis.com/auth/gmail.modify',
-          'https://www.googleapis.com/auth/pubsub']
+          'https://www.googleapis.com/auth/pubsub',
+          'https://www.googleapis.com/auth/gmail.readonly']
 
 SENDER_EMAIL = "newshorizonapp@gmail.com"
 
@@ -71,11 +73,7 @@ def __createGmailService():
     return service
 
 
-def create_message(sender, to, subject, plain_text, html_text=None):
-    # message = MIMEText(message_text)
-    # message['to'] = to
-    # message['from'] = sender
-    # message['subject'] = subject
+def create_message(sender, to, subject, plain_text, html_text=None, thread_id=None, in_reply_to=None):
 
     message = MIMEMultipart('alternative')
     message["subject"] = subject
@@ -88,7 +86,27 @@ def create_message(sender, to, subject, plain_text, html_text=None):
         part2 = MIMEText(html_text, "html")
         message.attach(part2)
 
-    return {'raw': base64.urlsafe_b64encode(bytes(message.as_string(), "utf-8")).decode("utf-8")}
+    message.add_header("In-Reply-To", in_reply_to)
+    message.add_header("References", in_reply_to)
+
+    output = {'raw': base64.urlsafe_b64encode(bytes(message.as_string(), "utf-8")).decode("utf-8")}
+
+    if thread_id is not None:
+        output['threadId'] = thread_id
+
+    return output
+
+
+def answerEmail(request_email, to, plain_text, html_text=None, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
+    message = create_message(
+        sender=SENDER_EMAIL,
+        to=to,
+        subject="RE: " + request_email['subject'],
+        plain_text=plain_text,
+        html_text=html_text,
+        thread_id=request_email['threadId'],
+        in_reply_to=request_email['message-id'])
+    return send_message(service, 'me', message)
 
 
 def create_draft(service, user_id, message_body):
@@ -162,17 +180,17 @@ def getMessageContent(message):
     service = getGmailService()
     values = {}
     values['id'] = message['id']
+    values['threadId'] = message['threadId']
     raw = get_message(service, 'me', message['id'])
     if raw is not None:
         if 'payload' in raw:
             if 'headers' in raw['payload']:
                 for entry in raw['payload']['headers']:
                     values[entry['name'].lower()] = entry['value']
-
             if 'parts' in raw['payload'] and len(raw['payload']['parts']) > 0 and 'body' in raw['payload']['parts'][0]\
                     and 'data' in raw['payload']['parts'][0]['body']:
                 values['content'] = decode(raw['payload']['parts'][0]['body']['data'])
-            elif 'body' in raw and 'data' in raw['payload']['body']:
+            elif 'body' in raw['payload'] and 'data' in raw['payload']['body']:
                 values['content'] = decode(raw['payload']['body']['data'])
             else:
                 values['content'] = ''
@@ -202,7 +220,7 @@ def parse_email(email_tag):
 def downloadArticle(article_search, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
     sources = sql_utils.getSourceFromUrl(article_search.search_url, host=host, schema=schema)
     if len(sources) == 0:
-        logging.error('FAILURE: Source not found ' + article_search.article_search_uuid)
+        logging.error('FAILURE: Source not found ' + str(article_search.article_search_uuid))
         sql_utils.updateSearchStatus(article_search.article_search_uuid, 'FAILURE: Source not found', host=host,
                                      schema=schema)
         return None
@@ -210,7 +228,7 @@ def downloadArticle(article_search, host=sql_utils.Host.G_CLOUD_SSL, schema=mode
         if len(sources) == 1:
             source = sources[0]
         else:
-            logging.error('FAILURE: Source domain not found ' + article_search.article_search_uuid)
+            logging.error('FAILURE: Source domain not found ' + str(article_search.article_search_uuid))
             return None
             # Code not functional. TODO fix and add back
 
@@ -227,7 +245,7 @@ def downloadArticle(article_search, host=sql_utils.Host.G_CLOUD_SSL, schema=mode
             # if len(sources) == 0:  # eliminated too many sources, should not happen
             #     sql_utils.updateSearchStatus(article_search.article_search_uuid, 'FAILURE: Source domain not found',
             #                                  host=host, schema=schema)
-            #     logging.error('FAILURE: Source domain not found ' + article_search.article_search_uuid)
+            #     logging.error('FAILURE: Source domain not found ' + str(article_search.article_search_uuid))
             #     return None
             # else:
             #     source = sources[0]
@@ -251,7 +269,8 @@ def downloadArticle(article_search, host=sql_utils.Host.G_CLOUD_SSL, schema=mode
             return articles[0]
 
 
-def answer_emails(request_emails, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
+def processEmails(request_emails, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
+    logging.debug("### Starting to answer emails at " + getCurrentTimestamp())
     count = 0
     for request_i in request_emails:
         logging.debug("### Article search for article %s at " % request_i['subject'] + getCurrentTimestamp())
@@ -268,7 +287,7 @@ def answer_emails(request_emails, host=sql_utils.Host.G_CLOUD_SSL, schema=models
         if search_url is None:
             logging.error("No URL found for message %s: %s\n %s\n" % (
                         request_i['id'], request_i['subject'], request_i['content']))
-            logging.debug(customer_uuid + " " + str(customer_uuid) + " " + type(customer_uuid))
+            logging.debug(str(customer_uuid) + " " + str(customer_uuid) + " " + str(type(customer_uuid)))
             sql_utils.insertEntry(models.ArticleSearch(
                 gmail_request_uuid=request_i['id'],
                 customer_uuid=str(customer_uuid),
@@ -278,7 +297,7 @@ def answer_emails(request_emails, host=sql_utils.Host.G_CLOUD_SSL, schema=models
         success = sql_utils.insertEntry(models.ArticleSearch(
             gmail_request_uuid=request_i['id'],
             search_url=search_url,
-            customer_uuid=customer_uuid,
+            customer_uuid=customer_uuid
         ), host=host, schema=schema)
         if not success:
             logging.error("Could not insert search for entry %s" % request_i['id'])
@@ -286,20 +305,17 @@ def answer_emails(request_emails, host=sql_utils.Host.G_CLOUD_SSL, schema=models
         else:
             logging.error("### Getting article search at " + getCurrentTimestamp())
             article_search = sql_utils.getSearch(request_i['id'], host=host, schema=schema)
-            # logging.debug(article_search)
-            # logging.debug(article_search.search_url)
-            # logging.debug(str(article_search.search_url))
-            search_article = article_search.article
-            # search_article = sql_utils.getArticle(article_search.search_url, host=host, schema=schema,
-            #                                       verbose=verbose)
+            search_article = sql_utils.getArticle(search_url, host=host, schema=schema)
             if search_article is None:
                 # broken code, add when fixed
                 # search_article = downloadArticle(article_search, host=host, schema=schema)
                 if search_article is None:
-                    logging.error('FAILURE: Article not found ' + article_search.article_search_uuid)
+                    logging.error('FAILURE: Article not found for search ' + str(article_search))
                     sql_utils.updateSearchStatus(article_search.article_search_uuid, 'FAILURE: Article not found',
                                                  host=host, schema=schema)
                     continue
+            sql_utils.updateSearchArticle(article_search.article_search_uuid, search_article.article_uuid, host=host, 
+                                          schema=schema)
             search_attribute = 'title'
             logging.debug("### Starting similarity search at " + getCurrentTimestamp())
             result = data_science_utils.getSimilarArticlesFromText(
@@ -308,14 +324,9 @@ def answer_emails(request_emails, host=sql_utils.Host.G_CLOUD_SSL, schema=models
             result['title_url'] = result[['title', 'article_url']].apply(__addUrlLinks, axis=1)
             html_text = result[['source_name', 'title_url']].to_html(escape=False, header=False, index=False)
             plain_text = result[['source_name', 'title']].to_string(header=False, index=False)
-            message = create_message(
-                SENDER_EMAIL,
-                article_search.customer.customer_email,
-                "Your News search is ready.",
-                plain_text,
-                html_text)
             logging.debug("### Sending answer email at " + getCurrentTimestamp())
-            sent_message = send_message(service, 'me', message)
+            sent_message = answerEmail(request_email=request_i, to=article_search.customer.customer_email,
+                                       plain_text=plain_text, html_text=html_text, host=host, schema=schema)
             logging.debug("### Seting article search status at " + getCurrentTimestamp())
             if sent_message is None:
                 sql_utils.updateSearchStatus(article_search.article_search_uuid, 'FAILURE: Message not sent', host=host,
@@ -323,7 +334,8 @@ def answer_emails(request_emails, host=sql_utils.Host.G_CLOUD_SSL, schema=models
             else:
                 count += sql_utils.updateSearchStatus(article_search.article_search_uuid, 'SUCCESS', host=host,
                                                       schema=schema)
-                sql_utils.updateSearch(article_search.article_search_uuid, sent_message['id'], host=host, schema=schema)
+                sql_utils.updateSearchAnswer(article_search.article_search_uuid, sent_message['id'], host=host, 
+                                             schema=schema)
     return count
 
 
@@ -333,6 +345,14 @@ def __addUrlLinks(entry):
 
 def pipelineEmails(host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
     logging.debug("### Email pipeline started at " + getCurrentTimestamp())
+    emails = fetchEmails(host=host, schema=schema)
+    count = processEmails(emails, host=host, schema=schema)
+    logging.debug("### Email pipeline done at " + getCurrentTimestamp())
+    logging.info("Answered Email Count: " + str(count))
+    return count
+
+
+def fetchEmails(host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
     service = getGmailService()
     messages = get_messages(service, 'me')
     logging.debug("### Past request loading at " + getCurrentTimestamp())
@@ -360,11 +380,7 @@ def pipelineEmails(host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
                 ), host=host, schema=schema)
             else:
                 request_emails.append(values)
-    logging.debug("### Starting to answer emails at " + getCurrentTimestamp())
-    count = answer_emails(request_emails, host=host, schema=schema)
-    logging.debug("### Email pipeline done at " + getCurrentTimestamp())
-    logging.info("Answered Email Count: " + count)
-    return count
+    return request_emails
 
 
 def setPushNotifications():
