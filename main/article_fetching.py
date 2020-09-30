@@ -12,7 +12,7 @@ host = sql_utils.Host.G_CLOUD_SSL
 schema = models.schema
 
 log_file_name = DataManager.getModulePath() + os.sep + 'main' + os.sep + 'logs' + os.sep + 'article_fetching_log.txt'
-logging.basicConfig(filename=log_file_name, level=logging.WARNING)
+logging.basicConfig(filename=log_file_name, level=logging.ERROR)
 
 
 print("==================================")
