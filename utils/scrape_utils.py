@@ -305,7 +305,7 @@ def importAllFeeds(host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
     return n_imported
 
 
-def loadRoutine(host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema.INFO):
+def loadRoutine(host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
     count = 0
     # RSS feeds
     count += importAllFeeds(host=host, schema=schema)
