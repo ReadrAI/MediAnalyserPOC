@@ -213,7 +213,7 @@ def insertEntry(entry, host=Host.G_CLOUD_SSL, schema=models.schema):
         session.commit()
         return True
     except (psycopg2.errors.UniqueViolation, sqlalchemy.exc.IntegrityError):
-        logging.warning("Entry already exists for " + entry.article_url)
+        logging.warning("Entry already exists for " + str(entry))
         session.rollback()
         return False
 
