@@ -33,7 +33,7 @@ def hello():
     now = datetime.datetime.now(tz=pytz.timezone('Europe/Brussels')).strftime("%Y.%m.%d %H:%M %Z")
     print("Email Request: Loading new emails", now)
     logging.info("Email Request: Loading new emails at " + now)
-    return "<h1 style='color:blue'>Hello There!</h1>"
+    return 200  # "<h1 style='color:blue'>Hello There!</h1>"
 
 
 @app.route('/favicon.ico')
