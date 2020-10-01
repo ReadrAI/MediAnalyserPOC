@@ -153,3 +153,5 @@ credentials/
 
 # logs
 main/*log*.txt
+main/logs/*log*.txt
+flask_app/logs/*log*.txt
