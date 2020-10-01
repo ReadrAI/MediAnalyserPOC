@@ -269,7 +269,7 @@ def downloadArticle(article_search, host=sql_utils.Host.G_CLOUD_SSL, schema=mode
             return articles[0]
 
 
-def processEmails(request_emails, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
+def processEmailsOld(request_emails, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
     logging.debug("### Starting to answer emails at " + getCurrentTimestamp())
     count = 0
     for request_i in request_emails:
@@ -314,7 +314,7 @@ def processEmails(request_emails, host=sql_utils.Host.G_CLOUD_SSL, schema=models
                     sql_utils.updateSearchStatus(article_search.article_search_uuid, 'FAILURE: Article not found',
                                                  host=host, schema=schema)
                     continue
-            sql_utils.updateSearchArticle(article_search.article_search_uuid, search_article.article_uuid, host=host, 
+            sql_utils.updateSearchArticle(article_search.article_search_uuid, search_article.article_uuid, host=host,
                                           schema=schema)
             search_attribute = 'title'
             logging.debug("### Starting similarity search at " + getCurrentTimestamp())
@@ -334,8 +334,96 @@ def processEmails(request_emails, host=sql_utils.Host.G_CLOUD_SSL, schema=models
             else:
                 count += sql_utils.updateSearchStatus(article_search.article_search_uuid, 'SUCCESS', host=host,
                                                       schema=schema)
-                sql_utils.updateSearchAnswer(article_search.article_search_uuid, sent_message['id'], host=host, 
+                sql_utils.updateSearchAnswer(article_search.article_search_uuid, sent_message['id'], host=host,
                                              schema=schema)
+    return count
+
+
+def getCustomer(request, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
+    requester_email = parse_email(request['from'])
+    customer_uuid = sql_utils.getOrSetCustomerID(requester_email, host=host, schema=schema)
+    return customer_uuid
+
+
+def addArticleSearch(request, customer_uuid, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
+    article_search = models.ArticleSearch(gmail_request_uuid=request['id'], customer_uuid=str(customer_uuid),
+                                          status='Processing')
+    success = sql_utils.insertEntry(article_search, host=host, schema=schema)
+    if not success:
+        logging.error("Could not insert search for entry %s" % request['id'])
+    return customer_uuid
+
+
+def getSearchUrl(article_search, request, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
+    search_url = getUrlFromText(request['subject'])
+    if search_url is None:
+        search_url = getUrlFromText(request['content'])
+    if search_url is None:
+        logging.error("No URL found for message %s: %s\n %s\n" % (
+                    request['id'], request['subject'], request['content']))
+        sql_utils.updateSearchStatus(article_search.article_search_uuid, 'FAILURE: missing URL', host=host,
+                                     schema=schema)
+    return search_url
+
+
+def getSearchArticle(article_search, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
+    search_article = sql_utils.getArticle(article_search.search_url, host=host, schema=schema)
+    # if search_article is None:
+    # broken code, add when fixed
+    # search_article = downloadArticle(article_search, host=host, schema=schema)
+    if search_article is None:
+        logging.error('FAILURE: Article not found for search ' + str(article_search))
+        sql_utils.updateSearchStatus(article_search.article_search_uuid, 'FAILURE: Article not found', host=host,
+                                     schema=schema)
+    sql_utils.updateSearchArticle(article_search.article_search_uuid, search_article.article_uuid, host=host,
+                                  schema=schema)
+    return search_article
+
+
+def getSearchResults(article_search, search_attribute, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
+    search_results = data_science_utils.getSimilarArticlesFromText(
+        article_search.article.title if search_attribute == 'title' else article_search.article.description,
+        search_attribute, article_search.n_results)
+    search_results['title_url'] = search_results[['title', 'article_url']].apply(__addUrlLinks, axis=1)
+    return search_results
+
+
+def sendResults(article_search, search_results, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
+    html_text = search_results[['source_name', 'title_url']].to_html(escape=False, header=False, index=False)
+    plain_text = search_results[['source_name', 'title']].to_string(header=False, index=False)
+    sent_message = answerEmail(request_email=article_search.customer.customer_email,
+                               to=article_search.customer.customer_email,
+                               plain_text=plain_text, html_text=html_text, host=host, schema=schema)
+    if sent_message is None:
+        sql_utils.updateSearchStatus(article_search.article_search_uuid, 'FAILURE: Message not sent', host=host,
+                                     schema=schema)
+    else:
+        count = sql_utils.updateSearchStatus(article_search.article_search_uuid, 'SUCCESS', host=host,
+                                             schema=schema)
+        sql_utils.updateSearchAnswer(article_search.article_search_uuid, sent_message['id'], host=host,
+                                     schema=schema)
+    return count
+
+
+def processEmails(request_emails, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
+    count = 0
+    for request_i in request_emails:
+        logging.info("Processing request " + request_i['id'])
+        logging.info("Subject: " + request_i['subject'])
+
+        customer_uuid = getCustomer(host=host, schema=schema)
+        article_search = addArticleSearch(request_i, customer_uuid, host=host, schema=schema)
+        search_url = getSearchUrl(article_search)
+        if search_url is None:
+            continue
+
+        search_article = getSearchArticle(article_search, host=host, schema=schema)
+        if search_article is None:
+            continue
+
+        search_results = getSearchResults(article_search, search_attribute='title', host=host, schema=schema)
+
+        count += sendResults(article_search, search_results, host=host, schema=schema)
     return count
 
 
@@ -355,11 +443,8 @@ def pipelineEmails(host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
 def fetchEmails(host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
     service = getGmailService()
     messages = get_messages(service, 'me')
-    logging.debug("### Past request loading at " + getCurrentTimestamp())
     past_requests = sql_utils.getSearchMailIDs(host=host, schema=schema)
-    logging.debug("### Invalid email loading at " + getCurrentTimestamp())
     invalid_emails = sql_utils.getInvalidEmailIDs(host=host, schema=schema)
-    logging.debug("### New emails fetching at " + getCurrentTimestamp())
     logging.debug("### %d emails to fetch" % len(messages['messages']))
     request_emails = []
     for m in messages['messages']:
