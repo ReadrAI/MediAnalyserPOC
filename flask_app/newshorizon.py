@@ -26,14 +26,14 @@ log_file_name = DataManager.getModulePath() + os.sep + 'flask_app' + os.sep + 'l
 logging.basicConfig(filename=log_file_name, level=logging.INFO)
 
 
-@app.route("/")
+@app.route("/", methods=['GET', 'POST'])
 def hello():
     thread = threading.Thread(target=mail_utils.pipelineEmails, args=[host, models.schema])
     thread.start()
     now = datetime.datetime.now(tz=pytz.timezone('Europe/Brussels')).strftime("%Y.%m.%d %H:%M %Z")
     print("Email Request: Loading new emails", now)
     logging.info("Email Request: Loading new emails at " + now)
-    return 200  # "<h1 style='color:blue'>Hello There!</h1>"
+    return "<h1 style='color:blue'>Hello There!</h1>"
 
 
 @app.route('/favicon.ico')
