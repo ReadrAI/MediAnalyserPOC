@@ -6,6 +6,7 @@ import logging
 from utils import sql_utils
 from utils import models
 from utils import data_science_utils
+from utils import mail_utils
 from utils.data_manager import DataManager
 
 host = sql_utils.Host.G_CLOUD_SSL
@@ -20,6 +21,10 @@ print("Timestamp:", datetime.datetime.now(tz=pytz.timezone('Europe/Brussels')).s
 print("Host:", host.name)
 print("Schema:", schema)
 
-data_science_utils.createNlpModels(schema=schema, host=host)
+try:
+    data_science_utils.createNlpModels(schema=schema, host=host)
+except BaseException as e:
+    mail_utils.sendEmailNotification('ML Model Creation Exception', e)
+
 
 print("ML Model Creation Routine Finished\n")
