@@ -323,9 +323,12 @@ def getSearchArticle(article_search, request, host=sql_utils.Host.G_CLOUD_SSL, s
 def getSearchResults(article_search, search_attribute, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
     search_results = data_science_utils.getSimilarArticlesFromText(
         article_search.article.title if search_attribute == 'title' else article_search.article.description,
-        search_attribute, article_search.n_results)
+        search_attribute, article_search.n_results * 3)
     search_results['title_url'] = search_results[['title', 'article_url']].apply(__addUrlLinks, axis=1)
-    return search_results
+    search_results.drop_duplicates(subset=['article_url'])
+    search_results = search_results[(search_results['article_url'] != article_search.article.article_url) and
+                                    (search_results['article_url'] != article_search.search_url)]
+    return search_results.head(article_search.n_results)
 
 
 def sendResults(article_search, search_results, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
