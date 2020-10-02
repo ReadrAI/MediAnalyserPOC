@@ -6,6 +6,8 @@ import os
 import time
 import json
 import logging
+import sqlalchemy
+import psycopg2
 import requests
 import feedparser
 import pandas as pd
@@ -57,7 +59,7 @@ def importNYT(data, source_name, schema=models.schema, host=sql_utils.Host.G_CLO
             if source_uuid is None:
                 logging.error("Source Not Found: " + source_name)
                 return False
-            count += sql_utils.insertEntry(models.Article(
+            model_article = models.Article(
                 article_url=article['url'],
                 source_uuid=source_uuid,
                 provider_uuid=source_uuid,
@@ -66,7 +68,15 @@ def importNYT(data, source_name, schema=models.schema, host=sql_utils.Host.G_CLO
                 authors=[article['byline']],
                 published_at=article['published_date'],
                 updated_at=article['updated_date']
-            ), schema=schema, host=host)
+            )
+            try:
+                count += sql_utils.insertEntry(model_article, schema=schema, host=host)
+            except (sqlalchemy.exc.DataError, psycopg2.errors.DatetimeFieldOverflow):
+                sql_utils.rollbackSession(host=host, schema=schema)
+                model_article.published_at = datetime.now()
+                model_article.updated_at = datetime.now()
+                count += sql_utils.insertEntry(model_article, schema=schema, host=host)
+
     else:
         logging.error("Data error: " + (data['status'] if 'status' in data.keys() else data))
     return count

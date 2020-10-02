@@ -273,3 +273,7 @@ def getArticleData(article_uuids, host=Host.G_CLOUD_SSL, schema=models.schema):
     ).join(
         models.Source, models.Source.source_uuid == models.Article.source_uuid
     )
+
+
+def rollbackSession(host=Host.G_CLOUD_SSL, schema=models.schema):
+    getDBSession(host=host, schema=schema).rollback()
