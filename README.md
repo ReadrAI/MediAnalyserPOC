@@ -107,3 +107,13 @@ https://www.digitalocean.com/community/tutorials/how-to-serve-flask-applications
 https://www.datadoghq.com/blog/nginx-502-bad-gateway-errors-gunicorn/
 
 https://certbot.eff.org/lets-encrypt/debianbuster-nginx
+
+## Possible News Sources
+
+https://about.proquest.com/products-services/news-newspapers/Global-Breaking-Newswires.html
+
+https://about.proquest.com/products-services/news-newspapers/ProQuest-Recent-Newspapers.html
+
+https://about.proquest.com/products-services/news-newspapers/Newspaperscom-Library-Edition.html
+
+https://about.proquest.com/products-services/news-newspapers/?selectFilter-search=Public&selectFilterTwo-search=News+and+Issues
