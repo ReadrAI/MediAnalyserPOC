@@ -269,76 +269,6 @@ def downloadArticle(article_search, host=sql_utils.Host.G_CLOUD_SSL, schema=mode
             return articles[0]
 
 
-def processEmailsOld(request_emails, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
-    logging.debug("### Starting to answer emails at " + getCurrentTimestamp())
-    count = 0
-    for request_i in request_emails:
-        logging.debug("### Article search for article %s at " % request_i['subject'] + getCurrentTimestamp())
-        logging.info("Processing request " + request_i['id'])
-        logging.info("Subject: " + request_i['subject'])
-        logging.info("Content: " + request_i['content'])
-        requester_email = parse_email(request_i['from'])
-        logging.debug("### Customer ID search at " + getCurrentTimestamp())
-        customer_uuid = sql_utils.getOrSetCustomerID(requester_email, host=host, schema=schema)
-        search_url = getUrlFromText(request_i['subject'])
-        if search_url is None:
-            search_url = getUrlFromText(request_i['content'])
-        logging.debug("### Inserting search entry at " + getCurrentTimestamp())
-        if search_url is None:
-            logging.error("No URL found for message %s: %s\n %s\n" % (
-                        request_i['id'], request_i['subject'], request_i['content']))
-            logging.debug(str(customer_uuid) + " " + str(customer_uuid) + " " + str(type(customer_uuid)))
-            sql_utils.insertEntry(models.ArticleSearch(
-                gmail_request_uuid=request_i['id'],
-                customer_uuid=str(customer_uuid),
-                status='FAILURE: missing URL'
-            ), host=host, schema=schema)
-            continue
-        success = sql_utils.insertEntry(models.ArticleSearch(
-            gmail_request_uuid=request_i['id'],
-            search_url=search_url,
-            customer_uuid=customer_uuid
-        ), host=host, schema=schema)
-        if not success:
-            logging.error("Could not insert search for entry %s" % request_i['id'])
-            continue
-        else:
-            logging.error("### Getting article search at " + getCurrentTimestamp())
-            article_search = sql_utils.getSearch(request_i['id'], host=host, schema=schema)
-            search_article = sql_utils.getArticle(search_url, host=host, schema=schema)
-            if search_article is None:
-                # broken code, add when fixed
-                # search_article = downloadArticle(article_search, host=host, schema=schema)
-                if search_article is None:
-                    logging.error('FAILURE: Article not found for search ' + str(article_search))
-                    sql_utils.updateSearchStatus(article_search.article_search_uuid, 'FAILURE: Article not found',
-                                                 host=host, schema=schema)
-                    continue
-            sql_utils.updateSearchArticle(article_search.article_search_uuid, search_article.article_uuid, host=host,
-                                          schema=schema)
-            search_attribute = 'title'
-            logging.debug("### Starting similarity search at " + getCurrentTimestamp())
-            result = data_science_utils.getSimilarArticlesFromText(
-                search_article.title if search_attribute == 'title' else search_article.description,
-                search_attribute, article_search.n_results)
-            result['title_url'] = result[['title', 'article_url']].apply(__addUrlLinks, axis=1)
-            html_text = result[['source_name', 'title_url']].to_html(escape=False, header=False, index=False)
-            plain_text = result[['source_name', 'title']].to_string(header=False, index=False)
-            logging.debug("### Sending answer email at " + getCurrentTimestamp())
-            sent_message = answerEmail(request_email=request_i, to=article_search.customer.customer_email,
-                                       plain_text=plain_text, html_text=html_text, host=host, schema=schema)
-            logging.debug("### Seting article search status at " + getCurrentTimestamp())
-            if sent_message is None:
-                sql_utils.updateSearchStatus(article_search.article_search_uuid, 'FAILURE: Message not sent', host=host,
-                                             schema=schema)
-            else:
-                count += sql_utils.updateSearchStatus(article_search.article_search_uuid, 'SUCCESS', host=host,
-                                                      schema=schema)
-                sql_utils.updateSearchAnswer(article_search.article_search_uuid, sent_message['id'], host=host,
-                                             schema=schema)
-    return count
-
-
 def getCustomer(request, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
     requester_email = parse_email(request['from'])
     customer_uuid = sql_utils.getOrSetCustomerID(requester_email, host=host, schema=schema)
@@ -415,15 +345,25 @@ def processEmails(request_emails, host=sql_utils.Host.G_CLOUD_SSL, schema=models
         article_search = addArticleSearch(request_i, customer_uuid, host=host, schema=schema)
         search_url = getSearchUrl(article_search)
         if search_url is None:
+            notification_content = "sender: %s\nsubjet: %s\ncontent:\n%s" % (
+                request_i['from'], request_i['subject'], request_i['content'])
+            sendEmailNotification("Processing request, url not found", notification_content)
             continue
 
         search_article = getSearchArticle(article_search, host=host, schema=schema)
         if search_article is None:
+            notification_content = "sender: %s\nsubjet: %s\ncontent:\n%s" % (
+                request_i['from'], request_i['subject'], request_i['content'])
+            sendEmailNotification("Processing request, article not found", notification_content)
             continue
 
         search_results = getSearchResults(article_search, search_attribute='title', host=host, schema=schema)
 
         count += sendResults(article_search, search_results, host=host, schema=schema)
+        notification_content = "sender: %s\nsubjet: %s\ncontent:\n%s\nresults:\n%s" % (
+                request_i['from'], request_i['subject'], request_i['content'],
+                search_results[['title', 'article_url']].to_string())
+        sendEmailNotification("Processing request, done", notification_content)
     return count
 
 
@@ -475,3 +415,10 @@ def setPushNotifications():
         'topicName': 'projects/future-oasis-286707/topics/email-request-topic'
     }
     return service.users().watch(userId=SENDER_EMAIL, body=request).execute()
+
+
+def sendEmailNotification(subject, plain_text):
+    message = create_message(SENDER_EMAIL, 'jean.haizmann@gmail.com', subject, plain_text)
+    sent_message = send_message(getGmailService, 'me', message)
+    if sent_message is None:
+        logging.error("Notification not sent at " + getCurrentTimestamp() + ": " + subject + "\n" + plain_text)
