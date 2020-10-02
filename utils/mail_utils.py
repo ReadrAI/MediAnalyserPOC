@@ -341,29 +341,41 @@ def processEmails(request_emails, host=sql_utils.Host.G_CLOUD_SSL, schema=models
         logging.info("Processing request " + request_i['id'])
         logging.info("Subject: " + request_i['subject'])
 
-        customer_uuid = getCustomer(host=host, schema=schema)
-        article_search = addArticleSearch(request_i, customer_uuid, host=host, schema=schema)
-        search_url = getSearchUrl(article_search)
-        if search_url is None:
-            notification_content = "sender: %s\nsubjet: %s\ncontent:\n%s" % (
-                request_i['from'], request_i['subject'], request_i['content'])
-            sendEmailNotification("Processing request, url not found", notification_content)
-            continue
+        try:
+            customer_uuid = getCustomer(host=host, schema=schema)
+            article_search = addArticleSearch(request_i, customer_uuid, host=host, schema=schema)
+            search_url = getSearchUrl(article_search)
+            if search_url is None:
+                notification_content = "sender: %s\nsubjet: %s\ncontent:\n%s" % (
+                    request_i['from'], request_i['subject'], request_i['content'])
+                sendEmailNotification("Processing request, url not found", notification_content)
+                continue
 
-        search_article = getSearchArticle(article_search, host=host, schema=schema)
-        if search_article is None:
-            notification_content = "sender: %s\nsubjet: %s\ncontent:\n%s" % (
-                request_i['from'], request_i['subject'], request_i['content'])
-            sendEmailNotification("Processing request, article not found", notification_content)
-            continue
+            search_article = getSearchArticle(article_search, host=host, schema=schema)
+            if search_article is None:
+                notification_content = "sender: %s\nsubjet: %s\ncontent:\n%s" % (
+                    request_i['from'], request_i['subject'], request_i['content'])
+                sendEmailNotification("Processing request, article not found", notification_content)
+                continue
 
-        search_results = getSearchResults(article_search, search_attribute='title', host=host, schema=schema)
+            search_results = getSearchResults(article_search, search_attribute='title', host=host, schema=schema)
 
-        count += sendResults(article_search, search_results, host=host, schema=schema)
-        notification_content = "sender: %s\nsubjet: %s\ncontent:\n%s\nresults:\n%s" % (
-                request_i['from'], request_i['subject'], request_i['content'],
-                search_results[['title', 'article_url']].to_string())
-        sendEmailNotification("Processing request, done", notification_content)
+            count += sendResults(article_search, search_results, host=host, schema=schema)
+            notification_content = "sender: %s\nsubjet: %s\ncontent:\n%s\nresults:\n%s" % (
+                    request_i['from'], request_i['subject'], request_i['content'],
+                    search_results[['title', 'article_url']].to_string())
+            sendEmailNotification("Processing request, done", notification_content)
+        except Exception as e:
+            notification_content = ""
+            if request_i is not None:
+                if 'from' in request_i:
+                    notification_content += "sender: %s\n" % request_i['from']
+                if 'subject' in request_i:
+                    notification_content += "subject: %s\n" % request_i['subject']
+                if 'content' in request_i:
+                    notification_content += "content:\n%s\n" % request_i['content']
+            notification_content += "error:\n%\n" % e
+            sendEmailNotification("Pipeline Error", notification_content)
     return count
 
 
