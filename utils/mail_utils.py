@@ -382,6 +382,7 @@ def processEmails(request_emails, host=sql_utils.Host.G_CLOUD_SSL, schema=models
                     search_results[['title', 'article_url']].to_string())
             sendEmailNotification("Processing request, done", notification_content)
         except Exception as e:
+            logging.error(e)
             notification_content = ""
             if request_i is not None:
                 if 'from' in request_i:
@@ -390,9 +391,8 @@ def processEmails(request_emails, host=sql_utils.Host.G_CLOUD_SSL, schema=models
                     notification_content += "subject: %s\n" % request_i['subject']
                 if 'content' in request_i:
                     notification_content += "content:\n%s\n" % request_i['content']
-            notification_content += "error:\n%\n" % e
+            notification_content += "error:\n%s\n" % e
             sendEmailNotification("Pipeline Error", notification_content)
-            logging.error(e)
     return count
 
 
