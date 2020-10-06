@@ -86,6 +86,13 @@ def getDBSession(host=Host.G_CLOUD_SSL, schema=models.schema):
     if schema not in sessions:
         Session = sessionmaker(bind=getEngine(host=host, schema=schema))
         sessions[schema] = Session()
+    try:
+        yield sessions[schema]
+    except:
+        sessions[schema].rollback()
+        raise
+    else:
+        sessions[schema].commit()
     return sessions[schema]
 
 
@@ -229,7 +236,7 @@ def populateFeeds(source_name, feed_url, section=None, host=Host.G_CLOUD_SSL, sc
 
 def updateSearchStatus(article_search_uuid, status, host=Host.G_CLOUD_SSL, schema=models.schema):
     stmt = sqlalchemy.update(models.ArticleSearch)\
-        .where(models.ArticleSearch.article_search_uuid == article_search_uuid)\
+        .where(models.ArticleSearch.article_search_uuid == str(article_search_uuid))\
         .values(status=status)
     try:
         getEngine(host=host, schema=schema).connect().execute(stmt)
@@ -244,7 +251,7 @@ def updateSearchStatus(article_search_uuid, status, host=Host.G_CLOUD_SSL, schem
 def updateSearchAnswer(article_search_uuid, gmail_answer_uuid, host=Host.G_CLOUD_SSL, schema=models.schema):
     stmt = sqlalchemy.update(models.ArticleSearch)\
         .where(models.ArticleSearch.article_search_uuid == article_search_uuid)\
-        .values(gmail_answer_uuid=gmail_answer_uuid)
+        .values(gmail_answer_uuid=str(gmail_answer_uuid))
     getEngine(host=host, schema=schema).connect().execute(stmt)
     # getDBSession(host=host, schema=schema).commit()
 
