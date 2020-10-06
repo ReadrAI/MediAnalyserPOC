@@ -22,7 +22,8 @@ from utils import scrape_utils
 from utils import models
 from utils.data_manager import DataManager
 
-logging.getLogger('googleapicliet.discovery_cache').setLevel(logging.ERROR)
+# logging.getLogger('googleapicliet.discovery_cache').setLevel(logging.ERROR)
+# build('drive', 'v3', http=http, cache_discovery=False)
 
 # If modifying these scopes, delete the file token.pickle.
 SCOPES = ['https://www.googleapis.com/auth/gmail.send',
@@ -281,7 +282,7 @@ def addArticleSearch(request, customer_uuid, host=sql_utils.Host.G_CLOUD_SSL, sc
     success = sql_utils.insertEntry(article_search, host=host, schema=schema)
     if not success:
         logging.error("Could not insert search for entry %s" % request['id'])
-    return customer_uuid
+    return article_search
 
 
 def getSearchUrl(article_search, request, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
@@ -355,9 +356,9 @@ def processEmails(request_emails, host=sql_utils.Host.G_CLOUD_SSL, schema=models
         logging.info("Subject: " + request_i['subject'])
 
         try:
-            customer_uuid = getCustomer(host=host, schema=schema)
+            customer_uuid = getCustomer(request_i, host=host, schema=schema)
             article_search = addArticleSearch(request_i, customer_uuid, host=host, schema=schema)
-            search_url = getSearchUrl(article_search)
+            search_url = getSearchUrl(article_search, request_i, host=host, schema=schema)
             if search_url is None:
                 continue
 

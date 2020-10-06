@@ -17,3 +17,4 @@ flask_sqlalchemy
 google-auth-httplib2
 google-auth-oauthlib
 tzlocal
+oauth2client==1.5.2
