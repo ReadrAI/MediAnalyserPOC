@@ -392,6 +392,7 @@ def processEmails(request_emails, host=sql_utils.Host.G_CLOUD_SSL, schema=models
                     notification_content += "content:\n%s\n" % request_i['content']
             notification_content += "error:\n%\n" % e
             sendEmailNotification("Pipeline Error", notification_content)
+            logging.error(e)
     return count
 
 
@@ -447,6 +448,6 @@ def setPushNotifications():
 
 def sendEmailNotification(subject, plain_text):
     message = create_message(SENDER_EMAIL, 'jean.haizmann@gmail.com', subject, plain_text)
-    sent_message = send_message(getGmailService, 'me', message)
+    sent_message = send_message(getGmailService(), 'me', message)
     if sent_message is None:
         logging.error("Notification not sent at " + getCurrentTimestamp() + ": " + subject + "\n" + plain_text)
