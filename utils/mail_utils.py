@@ -361,12 +361,20 @@ def processEmails(request_emails, host=sql_utils.Host.G_CLOUD_SSL, schema=models
             search_url = getSearchUrl(article_search, request_i, host=host, schema=schema)
             if search_url is None:
                 continue
+            else:
+                article_search.search_url = search_url
+                sql_utils.commitEntry(article_search, host=host, schema=schema)
 
             search_article = getSearchArticle(article_search, request_i, host=host, schema=schema)
             if search_article is None:
                 continue
+            else:
+                article_search.article = search_article
+                sql_utils.commitEntry(article_search, host=host, schema=schema)
 
             search_results = getSearchResults(article_search, search_attribute='title', host=host, schema=schema)
+
+            # add search results to db
 
             count += sendResults(article_search, search_results, host=host, schema=schema)
             notification_content = "sender: %s\nsubjet: %s\ncontent:\n%s\nresults:\n%s" % (

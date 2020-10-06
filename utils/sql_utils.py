@@ -277,3 +277,12 @@ def getArticleData(article_uuids, host=Host.G_CLOUD_SSL, schema=models.schema):
 
 def rollbackSession(host=Host.G_CLOUD_SSL, schema=models.schema):
     getDBSession(host=host, schema=schema).rollback()
+
+
+def commitSession(host=Host.G_CLOUD_SSL, schema=models.schema):
+    getDBSession(host=host, schema=schema).commit()
+
+
+def commitEntry(entry, host=Host.G_CLOUD_SSL, schema=models.schema):
+    getDBSession(host=host, schema=schema).add(entry)
+    getDBSession(host=host, schema=schema).commit()
