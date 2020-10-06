@@ -329,7 +329,7 @@ def getSearchResults(article_search, search_attribute, host=sql_utils.Host.G_CLO
         search_attribute, article_search.n_results * 3)
     search_results['title_url'] = search_results[['title', 'article_url']].apply(__addUrlLinks, axis=1)
     search_results.drop_duplicates(subset=['article_url'])
-    search_results = search_results[(search_results['article_url'] != article_search.article.article_url) and
+    search_results = search_results[(search_results['article_url'] != article_search.article.article_url) &
                                     (search_results['article_url'] != article_search.search_url)]
     return search_results.head(article_search.n_results)
 
