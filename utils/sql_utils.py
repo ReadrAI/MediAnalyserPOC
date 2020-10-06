@@ -87,12 +87,10 @@ def getDBSession(host=Host.G_CLOUD_SSL, schema=models.schema):
         Session = sessionmaker(bind=getEngine(host=host, schema=schema))
         sessions[schema] = Session()
     try:
-        yield sessions[schema]
-    except:
-        sessions[schema].rollback()
-        raise
-    else:
         sessions[schema].commit()
+    except Exception as e:
+        sessions[schema].rollback()
+        logging.error(e)
     return sessions[schema]
 
 
@@ -234,33 +232,39 @@ def populateFeeds(source_name, feed_url, section=None, host=Host.G_CLOUD_SSL, sc
     ), host=Host.G_CLOUD_SSL, schema=models.schema)
 
 
-def updateSearchStatus(article_search_uuid, status, host=Host.G_CLOUD_SSL, schema=models.schema):
-    stmt = sqlalchemy.update(models.ArticleSearch)\
-        .where(models.ArticleSearch.article_search_uuid == str(article_search_uuid))\
-        .values(status=status)
-    try:
-        getEngine(host=host, schema=schema).connect().execute(stmt)
-        return 1
-    except BaseException as e:
-        logging.error(" ".join([str(article_search_uuid), status, host.name, schema]))
-        logging.error(e)
-        return 0
+def updateSearchStatus(article_search, status, host=Host.G_CLOUD_SSL, schema=models.schema):
+    article_search.status = status
+    commitEntry(article_search, host=host, schema=schema)
+    # stmt = sqlalchemy.update(models.ArticleSearch)\
+    #     .where(models.ArticleSearch.article_search_uuid == str(article_search_uuid))\
+    #     .values(status=status)
+    # try:
+    #     getEngine(host=host, schema=schema).connect().execute(stmt)
+    #     return 1
+    # except BaseException as e:
+    #     logging.error(" ".join([str(article_search_uuid), status, host.name, schema]))
+    #     logging.error(e)
+    #     return 0
     # getDBSession(host=host, schema=schema).commit()
 
 
-def updateSearchAnswer(article_search_uuid, gmail_answer_uuid, host=Host.G_CLOUD_SSL, schema=models.schema):
-    stmt = sqlalchemy.update(models.ArticleSearch)\
-        .where(models.ArticleSearch.article_search_uuid == article_search_uuid)\
-        .values(gmail_answer_uuid=str(gmail_answer_uuid))
-    getEngine(host=host, schema=schema).connect().execute(stmt)
+def updateSearchAnswer(article_search, gmail_answer_uuid, host=Host.G_CLOUD_SSL, schema=models.schema):
+    article_search.gmail_answer_uuid = str(gmail_answer_uuid)
+    commitEntry(article_search, host=host, schema=schema)
+    # stmt = sqlalchemy.update(models.ArticleSearch)\
+    #     .where(models.ArticleSearch.article_search_uuid == str(article_search_uuid))\
+    #     .values(gmail_answer_uuid=str(gmail_answer_uuid))
+    # getEngine(host=host, schema=schema).connect().execute(stmt)
     # getDBSession(host=host, schema=schema).commit()
 
 
-def updateSearchArticle(article_search_uuid, article_uuid, host=Host.G_CLOUD_SSL, schema=models.schema):
-    stmt = sqlalchemy.update(models.ArticleSearch)\
-        .where(models.ArticleSearch.article_search_uuid == article_search_uuid)\
-        .values(search_article=str(article_uuid))
-    getEngine(host=host, schema=schema).connect().execute(stmt)
+def updateSearchArticle(article_search, article_uuid, host=Host.G_CLOUD_SSL, schema=models.schema):
+    article_search.search_article = str(article_uuid)
+    commitEntry(article_search, host=host, schema=schema)
+    # stmt = sqlalchemy.update(models.ArticleSearch)\
+    #     .where(models.ArticleSearch.article_search_uuid == str(article_search_uuid))\
+    #     .values(search_article=str(article_uuid))
+    # getEngine(host=host, schema=schema).connect().execute(stmt)
     # getDBSession(host=host, schema=schema).commit()
 
 
@@ -291,5 +295,6 @@ def commitSession(host=Host.G_CLOUD_SSL, schema=models.schema):
 
 
 def commitEntry(entry, host=Host.G_CLOUD_SSL, schema=models.schema):
-    getDBSession(host=host, schema=schema).add(entry)
-    getDBSession(host=host, schema=schema).commit()
+    session = getDBSession(host=host, schema=schema)
+    session.add(entry)
+    session.commit()

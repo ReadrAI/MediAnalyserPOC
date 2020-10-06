@@ -3,6 +3,7 @@ Util functions for mail reception and sending
 """
 
 import re
+import sys
 import pytz
 import pickle
 import base64
@@ -222,7 +223,7 @@ def downloadArticle(article_search, host=sql_utils.Host.G_CLOUD_SSL, schema=mode
     sources = sql_utils.getSourceFromUrl(article_search.search_url, host=host, schema=schema)
     if len(sources) == 0:
         logging.error('FAILURE: Source not found ' + str(article_search.article_search_uuid))
-        sql_utils.updateSearchStatus(article_search.article_search_uuid, 'FAILURE: Source not found', host=host,
+        sql_utils.updateSearchStatus(article_search, 'FAILURE: Source not found', host=host,
                                      schema=schema)
         return None
     else:
@@ -244,7 +245,7 @@ def downloadArticle(article_search, host=sql_utils.Host.G_CLOUD_SSL, schema=mode
             #         if len(sources) <= 1:
             #             break
             # if len(sources) == 0:  # eliminated too many sources, should not happen
-            #     sql_utils.updateSearchStatus(article_search.article_search_uuid, 'FAILURE: Source domain not found',
+            #     sql_utils.updateSearchStatus(article_search, 'FAILURE: Source domain not found',
             #                                  host=host, schema=schema)
             #     logging.error('FAILURE: Source domain not found ' + str(article_search.article_search_uuid))
             #     return None
@@ -292,7 +293,7 @@ def getSearchUrl(article_search, request, host=sql_utils.Host.G_CLOUD_SSL, schem
     if search_url is None:
         logging.error("No URL found for message %s: %s\n %s\n" % (
                     request['id'], request['subject'], request['content']))
-        sql_utils.updateSearchStatus(article_search.article_search_uuid, 'FAILURE: missing URL', host=host,
+        sql_utils.updateSearchStatus(article_search, 'FAILURE: missing URL', host=host,
                                      schema=schema)
         failure_text = 'We could not find any news article URL in your email.\nWe work hard to remedy to the problem!'
         answerEmail(request, article_search.customer.customer_email, failure_text, host=host, schema=schema)
@@ -309,15 +310,16 @@ def getSearchArticle(article_search, request, host=sql_utils.Host.G_CLOUD_SSL, s
     # search_article = downloadArticle(article_search, host=host, schema=schema)
     if search_article is None:
         logging.error('FAILURE: Article not found for search ' + str(article_search))
-        sql_utils.updateSearchStatus(article_search.article_search_uuid, 'FAILURE: Article not found', host=host,
+        sql_utils.updateSearchStatus(article_search, 'FAILURE: Article not found', host=host,
                                      schema=schema)
         failure_text = 'We could not find your article in our database.\nWe work hard to remedy to the problem!'
         answerEmail(request, article_search.customer.customer_email, failure_text, host=host, schema=schema)
         notification_content = "sender: %s\nsubjet: %s\ncontent:\n%s" % (
                     request['from'], request['subject'], request['content'])
         sendEmailNotification("Processing request, article not found", notification_content)
-    sql_utils.updateSearchArticle(article_search.article_search_uuid, search_article.article_uuid, host=host,
-                                  schema=schema)
+    else:
+        sql_utils.updateSearchArticle(article_search, search_article.article_uuid, host=host,
+                                      schema=schema)
     return search_article
 
 
@@ -339,12 +341,12 @@ def sendResults(article_search, search_results, host=sql_utils.Host.G_CLOUD_SSL,
                                to=article_search.customer.customer_email,
                                plain_text=plain_text, html_text=html_text, host=host, schema=schema)
     if sent_message is None:
-        sql_utils.updateSearchStatus(article_search.article_search_uuid, 'FAILURE: Message not sent', host=host,
+        sql_utils.updateSearchStatus(article_search, 'FAILURE: Message not sent', host=host,
                                      schema=schema)
     else:
-        count = sql_utils.updateSearchStatus(article_search.article_search_uuid, 'SUCCESS', host=host,
+        count = sql_utils.updateSearchStatus(article_search, 'SUCCESS', host=host,
                                              schema=schema)
-        sql_utils.updateSearchAnswer(article_search.article_search_uuid, sent_message['id'], host=host,
+        sql_utils.updateSearchAnswer(article_search, sent_message['id'], host=host,
                                      schema=schema)
     return count
 
@@ -383,6 +385,7 @@ def processEmails(request_emails, host=sql_utils.Host.G_CLOUD_SSL, schema=models
             sendEmailNotification("Processing request, done", notification_content)
         except Exception as e:
             logging.error(e)
+            logging.error(sys.exc_info()[0])
             notification_content = ""
             if request_i is not None:
                 if 'from' in request_i:
