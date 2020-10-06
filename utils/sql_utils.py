@@ -90,6 +90,7 @@ def getDBSession(host=Host.G_CLOUD_SSL, schema=models.schema):
         sessions[schema].commit()
     except Exception as e:
         sessions[schema].rollback()
+        logging.error('Rolled back session (%s, %s)' % (host.host, schema))
         logging.error(e)
     return sessions[schema]
 
@@ -234,38 +235,17 @@ def populateFeeds(source_name, feed_url, section=None, host=Host.G_CLOUD_SSL, sc
 
 def updateSearchStatus(article_search, status, host=Host.G_CLOUD_SSL, schema=models.schema):
     article_search.status = status
-    commitEntry(article_search, host=host, schema=schema)
-    # stmt = sqlalchemy.update(models.ArticleSearch)\
-    #     .where(models.ArticleSearch.article_search_uuid == str(article_search_uuid))\
-    #     .values(status=status)
-    # try:
-    #     getEngine(host=host, schema=schema).connect().execute(stmt)
-    #     return 1
-    # except BaseException as e:
-    #     logging.error(" ".join([str(article_search_uuid), status, host.name, schema]))
-    #     logging.error(e)
-    #     return 0
-    # getDBSession(host=host, schema=schema).commit()
+    commitSession(host=host, schema=schema)
 
 
 def updateSearchAnswer(article_search, gmail_answer_uuid, host=Host.G_CLOUD_SSL, schema=models.schema):
     article_search.gmail_answer_uuid = str(gmail_answer_uuid)
-    commitEntry(article_search, host=host, schema=schema)
-    # stmt = sqlalchemy.update(models.ArticleSearch)\
-    #     .where(models.ArticleSearch.article_search_uuid == str(article_search_uuid))\
-    #     .values(gmail_answer_uuid=str(gmail_answer_uuid))
-    # getEngine(host=host, schema=schema).connect().execute(stmt)
-    # getDBSession(host=host, schema=schema).commit()
+    commitSession(host=host, schema=schema)
 
 
 def updateSearchArticle(article_search, article_uuid, host=Host.G_CLOUD_SSL, schema=models.schema):
     article_search.search_article = str(article_uuid)
-    commitEntry(article_search, host=host, schema=schema)
-    # stmt = sqlalchemy.update(models.ArticleSearch)\
-    #     .where(models.ArticleSearch.article_search_uuid == str(article_search_uuid))\
-    #     .values(search_article=str(article_uuid))
-    # getEngine(host=host, schema=schema).connect().execute(stmt)
-    # getDBSession(host=host, schema=schema).commit()
+    commitSession(host=host, schema=schema)
 
 
 def getRSSFeeds(host=Host.G_CLOUD_SSL, schema=models.schema):
@@ -287,14 +267,9 @@ def getArticleData(article_uuids, host=Host.G_CLOUD_SSL, schema=models.schema):
 
 
 def rollbackSession(host=Host.G_CLOUD_SSL, schema=models.schema):
+    logging.error('Rolled back session (%s, %s)' % (host.host, schema))
     getDBSession(host=host, schema=schema).rollback()
 
 
 def commitSession(host=Host.G_CLOUD_SSL, schema=models.schema):
     getDBSession(host=host, schema=schema).commit()
-
-
-def commitEntry(entry, host=Host.G_CLOUD_SSL, schema=models.schema):
-    session = getDBSession(host=host, schema=schema)
-    session.add(entry)
-    session.commit()

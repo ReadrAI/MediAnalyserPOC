@@ -23,8 +23,6 @@ from utils import scrape_utils
 from utils import models
 from utils.data_manager import DataManager
 
-# logging.getLogger('googleapicliet.discovery_cache').setLevel(logging.ERROR)
-# build('drive', 'v3', http=http, cache_discovery=False)
 
 # If modifying these scopes, delete the file token.pickle.
 SCOPES = ['https://www.googleapis.com/auth/gmail.send',
@@ -300,6 +298,9 @@ def getSearchUrl(article_search, request, host=sql_utils.Host.G_CLOUD_SSL, schem
         notification_content = "sender: %s\nsubjet: %s\ncontent:\n%s" % (
                     request['from'], request['subject'], request['content'])
         sendEmailNotification("Processing request, url not found", notification_content)
+    else:
+        article_search.search_url = search_url
+        sql_utils.commitSession(host=host, schema=schema)
     return search_url
 
 
@@ -318,8 +319,8 @@ def getSearchArticle(article_search, request, host=sql_utils.Host.G_CLOUD_SSL, s
                     request['from'], request['subject'], request['content'])
         sendEmailNotification("Processing request, article not found", notification_content)
     else:
-        sql_utils.updateSearchArticle(article_search, search_article.article_uuid, host=host,
-                                      schema=schema)
+        article_search.search_article = str(search_article.article_uuid)
+        sql_utils.commitSession(host=host, schema=schema)
     return search_article
 
 
@@ -334,21 +335,18 @@ def getSearchResults(article_search, search_attribute, host=sql_utils.Host.G_CLO
     return search_results.head(article_search.n_results)
 
 
-def sendResults(article_search, search_results, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
+def sendResults(article_search, search_results, request, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
     html_text = search_results[['source_name', 'title_url']].to_html(escape=False, header=False, index=False)
     plain_text = search_results[['source_name', 'title']].to_string(header=False, index=False)
-    sent_message = answerEmail(request_email=article_search.customer.customer_email,
-                               to=article_search.customer.customer_email,
+    sent_message = answerEmail(request_email=request, to=article_search.customer.customer_email,
                                plain_text=plain_text, html_text=html_text, host=host, schema=schema)
     if sent_message is None:
-        sql_utils.updateSearchStatus(article_search, 'FAILURE: Message not sent', host=host,
-                                     schema=schema)
+        sql_utils.updateSearchStatus(article_search, 'FAILURE: Message not sent', host=host, schema=schema)
+        return False
     else:
-        count = sql_utils.updateSearchStatus(article_search, 'SUCCESS', host=host,
-                                             schema=schema)
-        sql_utils.updateSearchAnswer(article_search, sent_message['id'], host=host,
-                                     schema=schema)
-    return count
+        sql_utils.updateSearchStatus(article_search, 'SUCCESS', host=host, schema=schema)
+        sql_utils.updateSearchAnswer(article_search, sent_message['id'], host=host, schema=schema)
+        return True
 
 
 def processEmails(request_emails, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
@@ -363,22 +361,16 @@ def processEmails(request_emails, host=sql_utils.Host.G_CLOUD_SSL, schema=models
             search_url = getSearchUrl(article_search, request_i, host=host, schema=schema)
             if search_url is None:
                 continue
-            else:
-                article_search.search_url = search_url
-                sql_utils.commitEntry(article_search, host=host, schema=schema)
 
             search_article = getSearchArticle(article_search, request_i, host=host, schema=schema)
             if search_article is None:
                 continue
-            else:
-                article_search.article = search_article
-                sql_utils.commitEntry(article_search, host=host, schema=schema)
 
             search_results = getSearchResults(article_search, search_attribute='title', host=host, schema=schema)
 
             # add search results to db
 
-            count += sendResults(article_search, search_results, host=host, schema=schema)
+            count += sendResults(article_search, search_results, request_i, host=host, schema=schema)
             notification_content = "sender: %s\nsubjet: %s\ncontent:\n%s\nresults:\n%s" % (
                     request_i['from'], request_i['subject'], request_i['content'],
                     search_results[['title', 'article_url']].to_string())
@@ -396,6 +388,7 @@ def processEmails(request_emails, host=sql_utils.Host.G_CLOUD_SSL, schema=models
                     notification_content += "content:\n%s\n" % request_i['content']
             notification_content += "error:\n%s\n" % e
             sendEmailNotification("Pipeline Error", notification_content)
+            # raise e
     return count
 
 
