@@ -204,7 +204,7 @@ def decode(text):
 
 
 def getUrlFromText(text):
-    reg = re.search("(?P<url>https?://[^\s]+)", text)
+    reg = re.search("(?P<url>https?://[^\s?]+)", text)
     if reg is not None:
         return reg.group("url")
 
