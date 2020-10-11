@@ -123,19 +123,38 @@ def getSource(name, host=Host.G_CLOUD_SSL, schema=models.schema):
 def getSourceFromUrl(url, host=Host.G_CLOUD_SSL, schema=models.schema):
 
     def getStem(to_stem):
-        return urlparse(to_stem).netloc.split('.')[-2]
+        stem = urlparse(to_stem).netloc.split('.')
+        for s in stem:
+            if s.lower().startswith('the') and len(s) != 3:
+                stem = list([s[3:], 'the']) + stem
+        return sorted(list(filter(lambda x: 'www' not in x, stem)), key=len, reverse=True)
 
-    stem = urlparse(url).netloc.split('.')[-2]
-    sources = getDBSession(host=host, schema=schema).query(models.Source)\
-        .filter(models.Source.website_url.contains(stem)).all()
+    stem = getStem(url)
+    if len(stem) == 0:
+        return None
+
+    sources = []
+    i = 0
+    while len(sources) == 0 and len(stem) > 0:
+        sources = getDBSession(host=host, schema=schema).query(models.Source)\
+            .filter(sqlalchemy.func.lower(models.Source.website_url).contains(stem[i])).all()
+        if len(sources) == 0:
+            stem = stem[1:]
+
     if len(sources) > 1:
         for source_i in sources:
-            if getStem(source_i.source_url) == stem and stem != '':
+            if ''.join(getStem(source_i.website_url)).lower() == ''.join(stem).lower() and len(stem) != 0:
                 return source_i
-        logging.warning("Warning: multiple sources matching url", url)
-        logging.warning("Possible matches " + [x['source_name'] for x in sources])
-        return sources[0]
-    elif len(sources) == 0:
+        for i in range(len(stem) - 1):
+            sources = list(filter(lambda x: stem[i] in x.source_name.lower(), sources))
+            if len(sources) <= 1:
+                break
+
+    if len(sources) == 0:
+        logging.error("No source found for article " + str(url))
+        return None
+    elif len(sources) > 1:
+        logging.error("Multiple sources (%d) found for article %s" % (len(sources), url))
         return None
     return sources[0]
 
