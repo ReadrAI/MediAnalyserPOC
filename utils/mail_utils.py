@@ -218,6 +218,25 @@ def parse_email(email_tag):
 
 
 def downloadArticle(article_search, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
+    title = scrape_utils.scrapeArticleTitle(article_search.search_url)
+    if title is None:
+        return None
+
+    source = sql_utils.getSourceFromUrl(article_search.search_url, host=host, schema=schema)
+    if source is None:
+        return None
+
+    article = models.Article(
+        article_url=article_search.search_url,
+        source_uuid=source.source_uuid,
+        provider_uuid=source.source_uuid,
+        title=title,
+    )
+
+    sql_utils.insertEntry(article, host=host, schema=schema)
+    return article
+
+    # TODO correct code and add if useful
     sources = sql_utils.getSourceFromUrl(article_search.search_url, host=host, schema=schema)
     if len(sources) == 0:
         logging.error('FAILURE: Source not found ' + str(article_search.article_search_uuid))
