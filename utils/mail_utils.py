@@ -325,9 +325,9 @@ def getSearchUrl(article_search, request, host=sql_utils.Host.G_CLOUD_SSL, schem
 
 def getSearchArticle(article_search, request, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
     search_article = sql_utils.getArticle(article_search.search_url, host=host, schema=schema)
-    # if search_article is None:
-    # broken code, add when fixed
-    search_article = downloadArticle(article_search, host=host, schema=schema)
+    if search_article is None:
+        # broken code, add when fixed
+        search_article = downloadArticle(article_search, host=host, schema=schema)
     if search_article is None:
         logging.error('FAILURE: Article not found for search ' + str(article_search))
         sql_utils.updateSearchStatus(article_search, 'FAILURE: Article not found', host=host,
