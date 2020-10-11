@@ -228,8 +228,8 @@ def downloadArticle(article_search, host=sql_utils.Host.G_CLOUD_SSL, schema=mode
 
     article = models.Article(
         article_url=article_search.search_url,
-        source_uuid=source.source_uuid,
-        provider_uuid=source.source_uuid,
+        source_uuid=str(source.source_uuid),
+        provider_uuid=str(source.source_uuid),
         title=title,
     )
 
