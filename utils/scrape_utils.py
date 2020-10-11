@@ -12,6 +12,8 @@ import requests
 import feedparser
 import pandas as pd
 
+from bs4 import BeautifulSoup
+
 from datetime import datetime
 from urllib.parse import urlparse
 
@@ -46,6 +48,17 @@ def getFileName(topic, source_name, page=None):
     return homeDir + os.sep + 'raw_data' + os.sep + source_name.lower().replace(" ", "") \
         + '_' + datetime.now().strftime("%Y%m%d_%H%M") + '_' + topic.lower().replace(" ", "-") + \
         ('' if page is None else ('_%d' % page)) + '.csv'
+
+
+def scrapeArticleTitle(url):
+    page = requests.get(url)
+    if page.status_code == 200:
+        soup = BeautifulSoup(page.text, "html.parser")
+        all_h1 = map(lambda x: x.text.replace("\n", ''), soup.find_all('h1'))
+        title = list(filter(lambda x: x != '' and len(x.split(' ')) > 2, all_h1))
+        return title[0]
+    else:
+        return None
 
 
 def importNYT(data, source_name, schema=models.schema, host=sql_utils.Host.G_CLOUD_SSL):
