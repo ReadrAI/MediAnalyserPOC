@@ -19,3 +19,4 @@ google-auth-oauthlib
 tzlocal
 oauth2client==1.5.2
 bs4
+google-cloud-translate==2.0.1
