@@ -57,6 +57,22 @@ class Article(Base):
         return '<Article {}: {}>'.format(self.article_uuid, self.title)
 
 
+class MultiLingualArticle(Base):
+    """Multi-Lingual Media Articles and News Content."""
+    __tablename__ = "multi_lingual_articles"
+    __table_args__ = {"schema": schema}
+
+    article_uuid = Column(UUID, ForeignKey(schema + ".articles.article_uuid"), primary_key=True, nullable=False)
+    language = Column(Text, nullable=False)
+    title = Column(Text, nullable=False)
+    description = Column(Text)
+
+    article = relationship("Article")
+
+    def __repr__(self):
+        return '<Article {}: ({}) {}>'.format(self.article_uuid, self.language, self.title)
+
+
 class ArticleContent(Base):
     """Media Articles and News Content."""
     __tablename__ = "article_contents"
