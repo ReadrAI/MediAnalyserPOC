@@ -33,15 +33,18 @@ def getTranslationParent(project_id="future-oasis-286707", location="global"):
     return parents[project_id][location]
 
 
-def translate_text(text):
-    """Translating Text."""
+def translateBatch(textArray):
     translationClient = getTranslationClient()
     parent = getTranslationParent()
-    response = translationClient.translate_text(contents=[text], target_language_code='en', parent=parent)
+    response = translationClient.translate_text(contents=textArray, target_language_code='en', parent=parent)
     return response.translations
 
 
-def detect_language(text):
+def translateText(text):
+    return translateBatch([text])[0]
+
+
+def detectLanguage(text):
     translationClient = getTranslationClient()
     parent = getTranslationParent()
     response = translationClient.detect_language(parent=parent, content=text)
