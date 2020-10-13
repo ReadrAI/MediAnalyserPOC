@@ -21,6 +21,7 @@ from utils import sql_utils
 from utils import data_science_utils
 from utils import scrape_utils
 from utils import models
+from utils import translate_utils
 from utils.data_manager import DataManager
 
 
@@ -209,7 +210,7 @@ def getUrlFromText(text):
         return reg.group("url")
 
 
-def parse_email(email_tag):
+def parseEmail(email_tag):
     x = email_tag.find("<")
     if x >= 0:
         return email_tag[x+1:-1]
@@ -226,14 +227,28 @@ def downloadArticle(article_search, host=sql_utils.Host.G_CLOUD_SSL, schema=mode
     if source is None:
         return None
 
+    language = translate_utils.detectLanguage(title)
+    if language != 'en':
+        multi_lingual_article = models.MultiLingualArticle(
+            language=language,
+            title=title
+        )
+        translation = translate_utils.translateText(title)
+        title = translation.translated_text
+        # language = translation.detected_language_code
+
     article = models.Article(
         article_url=article_search.search_url,
         source_uuid=str(source.source_uuid),
         provider_uuid=str(source.source_uuid),
-        title=title,
+        title=title
     )
 
     sql_utils.insertEntry(article, host=host, schema=schema)
+
+    if language != 'en':
+        multi_lingual_article.article_uuid = str(article.article_uuid)
+        sql_utils.insertEntry(multi_lingual_article, host=host, schema=schema)
     return article
 
     # TODO correct code and add if useful
@@ -289,7 +304,7 @@ def downloadArticle(article_search, host=sql_utils.Host.G_CLOUD_SSL, schema=mode
 
 
 def getCustomer(request, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
-    requester_email = parse_email(request['from'])
+    requester_email = parseEmail(request['from'])
     customer_uuid = sql_utils.getOrSetCustomerID(requester_email, host=host, schema=schema)
     return customer_uuid
 
@@ -434,7 +449,7 @@ def fetchEmails(host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
     for m in messages['messages']:
         if m['id'] not in past_requests and m['id'] not in invalid_emails:
             values = getMessageContent(m)
-            request_email_i = parse_email(values['from'])
+            request_email_i = parseEmail(values['from'])
             if 'no-reply' in values['from']:
                 sql_utils.insertEntry(models.InvalidEmail(
                     gmail_request_uuid=m['id'],
