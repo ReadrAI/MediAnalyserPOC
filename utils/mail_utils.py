@@ -205,7 +205,7 @@ def decode(text):
 
 
 def getUrlFromText(text):
-    reg = re.search("(?P<url>https?://[^\s?]+)", text)
+    reg = re.search("(?P<url>https?://[^\s?>\"]+)", text)
     if reg is not None:
         return reg.group("url")
 
@@ -227,15 +227,15 @@ def downloadArticle(article_search, host=sql_utils.Host.G_CLOUD_SSL, schema=mode
     if source is None:
         return None
 
-    language = translate_utils.detectLanguage(title)
-    if language != 'en':
-        multi_lingual_article = models.MultiLingualArticle(
-            language=language,
-            title=title
-        )
+    if source.language != 'en':
         translation = translate_utils.translateText(title)
-        title = translation.translated_text
-        # language = translation.detected_language_code
+        language = translation.detected_language_code
+        if language != 'en':
+            multi_lingual_article = models.MultiLingualArticle(
+                language=language,
+                title=title
+            )
+            title = translation.translated_text
 
     article = models.Article(
         article_url=article_search.search_url,
@@ -244,9 +244,11 @@ def downloadArticle(article_search, host=sql_utils.Host.G_CLOUD_SSL, schema=mode
         title=title
     )
 
-    sql_utils.insertEntry(article, host=host, schema=schema)
+    insert_result = sql_utils.insertEntry(article, host=host, schema=schema)
+    if not insert_result:
+        return None
 
-    if language != 'en':
+    if source.language != 'en' and language != 'en':
         multi_lingual_article.article_uuid = str(article.article_uuid)
         sql_utils.insertEntry(multi_lingual_article, host=host, schema=schema)
     return article
@@ -481,3 +483,31 @@ def sendEmailNotification(subject, plain_text):
     sent_message = send_message(getGmailService(), 'me', message)
     if sent_message is None:
         logging.error("Notification not sent at " + getCurrentTimestamp() + ": " + subject + "\n" + plain_text)
+
+
+def processFailedArticleSearches(host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
+    count = 0
+    uncompleted_article_searches = sql_utils.getUncompletedArticleSearches(host=host, schema=schema)
+    for article_search in uncompleted_article_searches:
+        print('search_url: ' + article_search.search_url)
+        search_article = sql_utils.getArticle(article_search.search_url, host=host, schema=schema)
+
+        if search_article is None:
+            search_article = downloadArticle(article_search, host=host, schema=schema)
+
+        if search_article is None:
+            logging.error("Article not found, nor downloaded: " + str(article_search))
+            continue
+
+        article_search.search_article = str(search_article.article_uuid)
+        sql_utils.commitSession(host=host, schema=schema)
+
+        search_results = getSearchResults(article_search, search_attribute='title', host=host, schema=schema)
+
+        # add search results to db
+
+        message = get_message(getGmailService(), 'me', article_search.gmail_request_uuid)
+        request = getMessageContent(message)
+
+        count += sendResults(article_search, search_results, request, host=host, schema=schema)
+    return count
