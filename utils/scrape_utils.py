@@ -56,6 +56,10 @@ def scrapeArticleTitle(url):
         soup = BeautifulSoup(page.text, "html.parser")
         all_h1 = map(lambda x: x.text.replace("\n", ''), soup.find_all('h1'))
         title = list(filter(lambda x: x != '' and len(x.split(' ')) > 2, all_h1))
+        if len(title) == 0:
+            title = list(filter(lambda x: x != '', all_h1))
+            if len(title) == 0:
+                return None
         return title[0]
     else:
         return None
@@ -180,18 +184,32 @@ def importNewsAPIArticles(articles, source_name, schema=models.schema, host=sql_
     return count
 
 
-def importNewsAPISources(schema=models.schema, host=sql_utils.Host.G_CLOUD_SSL):
+def importNewsAPISources(language=None, country=None, schema=models.schema, host=sql_utils.Host.G_CLOUD_SSL):
+    url = f'https://newsapi.org/v2/sources?' +\
+          'page=%d&' +\
+          ('' if language is None or type(language) != str else 'language=' + language + '&') +\
+          ('' if country is None or type(country) != str else 'country=' + country + '&') +\
+          'apiKey=e30a64cfe1734e6794bdab67106590fa'
     sources = __fetchNewsAPI(
         content_type="sources",
-        url="https://newsapi.org/v2/sources?language=en&apiKey=e30a64cfe1734e6794bdab67106590fa")
+        url=url)
+
+    count = 0
     for s in sources:
-        sql_utils.insertEntry(models.Source(
+        source = models.Source(
             source_name=s['name'],
             country=s['country'],
             website_url=s['url'],
-            aliases=[s['id']]
-        ), schema=schema, host=host)
-    return sources
+            aliases=[s['id']],
+            language=s['language']
+        )
+        result = sql_utils.insertEntry(source, schema=schema, host=host)
+        if not result:
+            db_source = sql_utils.getSource(s['name'], host=host, schema=schema)
+            db_source.language = s['language']
+            sql_utils.commitSession(host=host, schema=schema)
+        count += result
+    return count
 
 
 def __fetchNewsAPI(content_type, url):
