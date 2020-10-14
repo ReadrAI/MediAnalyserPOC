@@ -28,6 +28,7 @@ class Source(Base):
     api_key = Column(Text)
     added_at = Column(DateTime, nullable=False, default=datetime.datetime.utcnow)
     aliases = Column(ARRAY(String))
+    language = Column(Text, nullable=True)
 
     def __repr__(self):
         return '<Source {}: {}>'.format(self.source_uuid, self.source_name)
