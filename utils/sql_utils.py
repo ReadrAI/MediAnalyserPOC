@@ -292,3 +292,8 @@ def rollbackSession(host=Host.G_CLOUD_SSL, schema=models.schema):
 
 def commitSession(host=Host.G_CLOUD_SSL, schema=models.schema):
     getDBSession(host=host, schema=schema).commit()
+
+
+def getUncompletedArticleSearches(host=Host.G_CLOUD_SSL, schema=models.schema):
+    return getDBSession(host=host, schema=schema).query(models.ArticleSearch).filter(
+        models.ArticleSearch.status == 'FAILURE: Article not found').all()
