@@ -185,7 +185,7 @@ def importNewsAPIArticles(articles, source_name, schema=models.schema, host=sql_
 
 
 def importNewsAPISources(language=None, country=None, schema=models.schema, host=sql_utils.Host.G_CLOUD_SSL):
-    url = f'https://newsapi.org/v2/sources?' +\
+    url = 'https://newsapi.org/v2/sources?' +\
           'page=%d&' +\
           ('' if language is None or type(language) != str else 'language=' + language + '&') +\
           ('' if country is None or type(country) != str else 'country=' + country + '&') +\
@@ -205,9 +205,10 @@ def importNewsAPISources(language=None, country=None, schema=models.schema, host
         )
         result = sql_utils.insertEntry(source, schema=schema, host=host)
         if not result:
-            db_source = sql_utils.getSource(s['name'], host=host, schema=schema)
-            db_source.language = s['language']
-            sql_utils.commitSession(host=host, schema=schema)
+            db_source = sql_utils.getSourceFromUrl(s['url'], host=host, schema=schema)
+            if db_source is not None:
+                db_source.language = s['language']
+                sql_utils.commitSession(host=host, schema=schema)
         count += result
     return count
 
