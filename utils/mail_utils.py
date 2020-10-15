@@ -225,6 +225,7 @@ def downloadArticle(article_search, host=sql_utils.Host.G_CLOUD_SSL, schema=mode
 
     source = sql_utils.getSourceFromUrl(article_search.search_url, host=host, schema=schema)
     if source is None:
+        # TODO: add source
         return None
 
     if source.language != 'en':
@@ -461,7 +462,7 @@ def fetchEmails(host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
         if m['id'] not in past_requests and m['id'] not in invalid_emails:
             values = getMessageContent(m)
             request_email_i = parseEmail(values['from'])
-            if not isBlocked(values['from'], host=host, schema=schema):
+            if isBlocked(values['from'], host=host, schema=schema):
                 sql_utils.insertEntry(models.InvalidEmail(
                     gmail_request_uuid=m['id'],
                     customer_uuid=sql_utils.getOrSetCustomerID(request_email_i, host=host, schema=schema),
