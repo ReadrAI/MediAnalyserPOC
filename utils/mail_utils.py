@@ -441,6 +441,15 @@ def pipelineEmails(host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
     return count
 
 
+def isBlocked(sender_email, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
+    if 'no-reply' in sender_email or 'support' in sender_email:
+        return True
+    elif sql_utils.isCustomerBlocked(sender_email, host=host, schema=schema):
+        return True
+    else:
+        return False
+
+
 def fetchEmails(host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
     service = getGmailService()
     messages = get_messages(service, 'me')
@@ -452,7 +461,7 @@ def fetchEmails(host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
         if m['id'] not in past_requests and m['id'] not in invalid_emails:
             values = getMessageContent(m)
             request_email_i = parseEmail(values['from'])
-            if 'no-reply' in values['from']:
+            if not isBlocked(values['from'], host=host, schema=schema):
                 sql_utils.insertEntry(models.InvalidEmail(
                     gmail_request_uuid=m['id'],
                     customer_uuid=sql_utils.getOrSetCustomerID(request_email_i, host=host, schema=schema),

@@ -1,7 +1,7 @@
 import uuid
 import datetime
 
-from sqlalchemy import Column, String, Text, DateTime, ARRAY, ForeignKey, Integer, Float
+from sqlalchemy import Column, String, Text, DateTime, ARRAY, ForeignKey, Integer, Float, Boolean
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
@@ -142,6 +142,7 @@ class Customer(Base):
     customer_uuid = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False, unique=True)
     customer_email = Column(Text, unique=True, nullable=False)
     added_at = Column(DateTime, nullable=False, default=datetime.datetime.utcnow)
+    is_blocked = Column(Boolean, nullable=False, default=lambda x: False)
 
     def __repr__(self):
         return '<Customer {}: {}>'.format(self.customer_uuid, self.customer_email)

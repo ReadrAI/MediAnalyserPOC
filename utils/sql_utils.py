@@ -188,6 +188,11 @@ def getOrSetSourceID(name, url, host=Host.G_CLOUD_SSL, schema=models.schema):
     return source_uuid
 
 
+def getCustomer(email, host=Host.G_CLOUD_SSL, schema=models.schema):
+    return getDBSession(host=host, schema=schema).query(models.Customer)\
+        .filter(models.Customer.customer_email == email).first()
+
+
 def getCustomerID(email, host=Host.G_CLOUD_SSL, schema=models.schema):
     customer_uuid = getDBSession(host=host, schema=schema).query(models.Customer.customer_uuid)\
         .filter(models.Customer.customer_email == email).first()
@@ -205,6 +210,27 @@ def getOrSetCustomerID(email, host=Host.G_CLOUD_SSL, schema=models.schema):
         ), host=host, schema=schema)
         customer_uuid = getCustomerID(email, host=host, schema=schema)
     return customer_uuid
+
+
+def isCustomerBlocked(email, host=Host.G_CLOUD_SSL, schema=models.schema):
+    is_blocked = getDBSession(host=host, schema=schema).query(models.Customer.is_blocked)\
+        .filter(models.Customer.customer_email == email).first()
+    if is_blocked is None:
+        return None
+    else:
+        return is_blocked[0]
+
+
+def blockCustomer(email, host=Host.G_CLOUD_SSL, schema=models.schema):
+    customer = getCustomer(email, host=host, schema=schema)
+    if customer is not None:
+        customer.is_blocked = True
+        try:
+            commitSession(host=host, schema=schema)
+            return True
+        except Exception:
+            return False
+    return False
 
 
 def getSearchMailIDs(host=Host.G_CLOUD_SSL, schema=models.schema):
