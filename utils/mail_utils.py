@@ -312,7 +312,7 @@ def getCustomer(request, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
     return customer_uuid
 
 
-def addArticleSearch(request, customer_uuid, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
+def addArticleSearch(customer_uuid, request, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
     article_search = models.ArticleSearch(gmail_request_uuid=request['id'], customer_uuid=str(customer_uuid),
                                           status='Processing')
     success = sql_utils.insertEntry(article_search, host=host, schema=schema)
@@ -325,6 +325,7 @@ def getSearchUrl(article_search, request, host=sql_utils.Host.G_CLOUD_SSL, schem
     search_url = getUrlFromText(request['subject'])
     if search_url is None:
         search_url = getUrlFromText(request['content'])
+
     if search_url is None:
         logging.error("No URL found for message %s: %s\n %s\n" % (
                     request['id'], request['subject'], request['content']))
@@ -335,17 +336,18 @@ def getSearchUrl(article_search, request, host=sql_utils.Host.G_CLOUD_SSL, schem
         notification_content = "sender: %s\nsubjet: %s\ncontent:\n%s" % (
                     request['from'], request['subject'], request['content'])
         sendEmailNotification("Processing request, url not found", notification_content)
+        return None
     else:
         article_search.search_url = search_url
         sql_utils.commitSession(host=host, schema=schema)
-    return search_url
+    return article_search
 
 
 def getSearchArticle(article_search, request, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
     search_article = sql_utils.getArticle(article_search.search_url, host=host, schema=schema)
     if search_article is None:
-        # broken code, add when fixed
         search_article = downloadArticle(article_search, host=host, schema=schema)
+
     if search_article is None:
         logging.error('FAILURE: Article not found for search ' + str(article_search))
         sql_utils.updateSearchStatus(article_search, 'FAILURE: Article not found', host=host,
@@ -355,10 +357,11 @@ def getSearchArticle(article_search, request, host=sql_utils.Host.G_CLOUD_SSL, s
         notification_content = "sender: %s\nsubjet: %s\ncontent:\n%s" % (
                     request['from'], request['subject'], request['content'])
         sendEmailNotification("Processing request, article not found", notification_content)
+        return None
     else:
         article_search.search_article = str(search_article.article_uuid)
         sql_utils.commitSession(host=host, schema=schema)
-    return search_article
+    return article_search
 
 
 def getSearchResults(article_search, search_attribute, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
@@ -394,13 +397,15 @@ def processEmails(request_emails, host=sql_utils.Host.G_CLOUD_SSL, schema=models
 
         try:
             customer_uuid = getCustomer(request_i, host=host, schema=schema)
-            article_search = addArticleSearch(request_i, customer_uuid, host=host, schema=schema)
-            search_url = getSearchUrl(article_search, request_i, host=host, schema=schema)
-            if search_url is None:
+
+            article_search = addArticleSearch(customer_uuid, request_i, host=host, schema=schema)
+
+            article_search = getSearchUrl(article_search, request_i, host=host, schema=schema)
+            if article_search is None or article_search.search_url is None:
                 continue
 
-            search_article = getSearchArticle(article_search, request_i, host=host, schema=schema)
-            if search_article is None:
+            article_search = getSearchArticle(article_search, request_i, host=host, schema=schema)
+            if article_search is None or article_search.search_article is None:
                 continue
 
             search_results = getSearchResults(article_search, search_attribute='title', host=host, schema=schema)
