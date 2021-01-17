@@ -1,0 +1,15 @@
+[Unit]
+Description=Gunicorn instance to serve newshorizonapp
+After=network.target
+
+[Service]
+User=newshorizonapp
+Group=www-data
+WorkingDirectory=/home/newshorizonapp/MediAnalyserPOC/flask_app
+Environment="PATH=/usr/bin/python"
+EnvironmentFile=/home/newshorizonapp/MediAnalyserPOC/flask_app/.env
+ExecStart=/usr/local/bin/gunicorn --workers 3 --bind unix:/var/run/newshorizon.sock --pythonpath /home/newshorizonapp/MediAnalyserPOC wsgi:app
+
+
+[Install]
+WantedBy=multi-user.target
