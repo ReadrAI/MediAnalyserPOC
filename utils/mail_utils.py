@@ -526,3 +526,9 @@ def processFailedArticleSearches(host=sql_utils.Host.G_CLOUD_SSL, schema=models.
 
         count += sendResults(article_search, search_results, request, host=host, schema=schema)
     return count
+
+
+def renewEmailAnalysis(article_search, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
+    sql_utils.getDBSession(host=host, schema=schema).delete(article_search)
+    sql_utils.commitSession(host=host, schema=schema)
+    return pipelineEmails(host=host, schema=schema) >= 1

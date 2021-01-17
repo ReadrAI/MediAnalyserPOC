@@ -233,6 +233,12 @@ def blockCustomer(email, host=Host.G_CLOUD_SSL, schema=models.schema):
     return False
 
 
+def getArticleSearchesForCustomer(email, host=Host.G_CLOUD_SSL, schema=models.schema):
+    return getDBSession(host=host, schema=schema).query(models.ArticleSearch).join(
+            models.Customer, models.Customer.customer_uuid == models.ArticleSearch.customer_uuid
+        ).filter(models.Customer.customer_email == email).all()
+
+
 def getSearchMailIDs(host=Host.G_CLOUD_SSL, schema=models.schema):
     return [r[0] for r in getDBSession(host=host, schema=schema).query(models.ArticleSearch.gmail_request_uuid).all()]
 
