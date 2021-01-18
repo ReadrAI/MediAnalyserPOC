@@ -39,7 +39,7 @@ make list_vars:
 make std_vars:
 	echo "#newshorizonapp" >> ~/.bashrc
 	echo "export REPOPATH=/home/jean/MediAnalyserPOC" >> ~/.bashrc
-	echo "export PYTHONPATH=$PYTHONPATH:$REPOPATH" >> ~/.bashrc
-	echo "export GOOGLE_APPLICATION_CREDENTIALS=/home/newshorizonapp/MediAnalyserPOC/credentials/future-oasis-286707-c52c864bbc9e.json"  >> ~/.bashrc
+	echo "export PYTHONPATH=\$(PYTHONPATH):\$(REPOPATH)" >> ~/.bashrc
+	echo "export GOOGLE_APPLICATION_CREDENTIALS=\$(REPOPATH)/credentials/future-oasis-286707-c52c864bbc9e.json"  >> ~/.bashrc
 	echo "" >> ~/.bashrc
 	echo "#end newshorizonapp" >> ~/.bashrc
