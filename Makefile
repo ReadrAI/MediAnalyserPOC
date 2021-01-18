@@ -43,3 +43,6 @@ make std_vars:
 	echo "export GOOGLE_APPLICATION_CREDENTIALS=$$(REPOPATH)/credentials/future-oasis-286707-c52c864bbc9e.json"  >> ~/.bashrc
 	echo "" >> ~/.bashrc
 	echo "#end newshorizonapp" >> ~/.bashrc
+
+make nginx_settings:
+	cat main/nginx_setting.txt > /etc/nginx/sites-available/newshorizon
