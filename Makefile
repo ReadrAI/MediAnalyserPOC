@@ -33,13 +33,13 @@ make srv_setting:
 	cat main/server_setting.txt > /etc/systemd/system/newshorizon.service
 
 make list_vars:
-	echo "REPOPATH $(REPOPATH)"
-	echo "GOOGLE_APPLICATION_CREDENTIALS $(GOOGLE_APPLICATION_CREDENTIALS)"
+	echo "REPOPATH $$(REPOPATH)"
+	echo "GOOGLE_APPLICATION_CREDENTIALS $$(GOOGLE_APPLICATION_CREDENTIALS)"
 
 make std_vars:
 	echo "#newshorizonapp" >> ~/.bashrc
 	echo "export REPOPATH=/home/jean/MediAnalyserPOC" >> ~/.bashrc
-	echo "export PYTHONPATH=\$(PYTHONPATH):\$(REPOPATH)" >> ~/.bashrc
-	echo "export GOOGLE_APPLICATION_CREDENTIALS=\$(REPOPATH)/credentials/future-oasis-286707-c52c864bbc9e.json"  >> ~/.bashrc
+	echo "export PYTHONPATH=$$(PYTHONPATH):$$(REPOPATH)" >> ~/.bashrc
+	echo "export GOOGLE_APPLICATION_CREDENTIALS=$$(REPOPATH)/credentials/future-oasis-286707-c52c864bbc9e.json"  >> ~/.bashrc
 	echo "" >> ~/.bashrc
 	echo "#end newshorizonapp" >> ~/.bashrc
