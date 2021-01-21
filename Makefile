@@ -26,17 +26,17 @@ gce_backup_logs:
 	gcloud compute scp newshorizonapp@worker:/home/newshorizonapp/MediAnalyserPOC/main/logs/email_push_notifications_log.txt /Users/jean/Documents/Coding/MediAnalyserPOC/main/logs/
 	gcloud compute scp newshorizonapp@worker:/home/newshorizonapp/MediAnalyserPOC/main/logs/ml_model_creation_logs.txt /Users/jean/Documents/Coding/MediAnalyserPOC/main/logs/
 
-make crontab:
+crontab:
 	crontab main/crontab.txt
 
-make srv_setting:
+srv_setting:
 	cat main/server_setting.txt > /etc/systemd/system/newshorizon.service
 
-make list_vars:
+list_vars:
 	echo "REPOPATH $$(REPOPATH)"
 	echo "GOOGLE_APPLICATION_CREDENTIALS $$(GOOGLE_APPLICATION_CREDENTIALS)"
 
-make std_vars:
+std_vars:
 	echo "#newshorizonapp" >> ~/.bashrc
 	echo "export REPOPATH=/home/jean/MediAnalyserPOC" >> ~/.bashrc
 	echo "export PYTHONPATH=$$(PYTHONPATH):$$(REPOPATH)" >> ~/.bashrc
@@ -44,5 +44,5 @@ make std_vars:
 	echo "" >> ~/.bashrc
 	echo "#end newshorizonapp" >> ~/.bashrc
 
-make nginx_settings:
+nginx_settings:
 	cat main/nginx_setting.txt > /etc/nginx/sites-available/newshorizon
