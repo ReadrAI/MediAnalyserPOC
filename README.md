@@ -1,5 +1,36 @@
 # MediAnalyserPOC
 
+### New server setup
+
+1. install requirements with pip
+
+'pip3 install -r requirements.txt'
+
+2. install en_core_web_sm
+
+'python3 -m spacy download en_core_web_sm'
+
+3. update pg_hba file:
+
+in database type
+
+'show hba_file;'
+
+open file, and edit line
+
+'local all all peers'
+\*other lines may also have to be changed
+
+set to
+
+'local all all trust'
+
+4. install cronjobs
+
+5. install nginx server
+
+6. install guincorn server
+
 ### Concept of the app
 
 1. Get Articles (once, weekly, daily, ...)
