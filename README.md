@@ -148,3 +148,13 @@ https://about.proquest.com/products-services/news-newspapers/ProQuest-Recent-New
 https://about.proquest.com/products-services/news-newspapers/Newspaperscom-Library-Edition.html
 
 https://about.proquest.com/products-services/news-newspapers/?selectFilter-search=Public&selectFilterTwo-search=News+and+Issues
+
+## Network
+
+https://linuxconfig.org/how-to-configure-static-ip-address-on-ubuntu-18-04-bionic-beaver-linux
+
+https://netplan.io/examples/
+
+https://www.ubuntu18.com/ubuntu-change-ssh-port/
+
+http://www.artdecoded.net/blog/how-to-change-the-ssh-port-in-mac-os-x/
