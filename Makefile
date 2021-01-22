@@ -26,6 +26,9 @@ gce_backup_logs:
 	gcloud compute scp newshorizonapp@worker:/home/newshorizonapp/MediAnalyserPOC/main/logs/email_push_notifications_log.txt /Users/jean/Documents/Coding/MediAnalyserPOC/main/logs/
 	gcloud compute scp newshorizonapp@worker:/home/newshorizonapp/MediAnalyserPOC/main/logs/ml_model_creation_logs.txt /Users/jean/Documents/Coding/MediAnalyserPOC/main/logs/
 
+max_connect:
+	ssh -p 22022 jean@5.149.19.251
+
 crontab:
 	crontab main/crontab.txt
 
