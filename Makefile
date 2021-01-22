@@ -29,6 +29,9 @@ gce_backup_logs:
 crontab:
 	crontab main/crontab.txt
 
+cron_log:
+	grep CRON /var/log/syslog
+
 srv_setting:
 	cat main/server_setting.txt > /etc/systemd/system/newshorizon.service
 

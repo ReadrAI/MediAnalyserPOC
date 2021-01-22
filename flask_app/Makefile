@@ -18,6 +18,3 @@ nginx_log:
 
 srv_edit:
 	sudo nano /etc/systemd/system/newshorizon.service
-
-cron_log:
-	grep CRON /var/log/syslog
