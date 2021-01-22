@@ -15,8 +15,8 @@
 # 
 # m h  dom mon dow   command
 
-0 * * * * PYTHONPATH=$(REPOPATH) python $(REPOPATH)/main/article_fetching.py >> $(REPOPATH)/main/logs/article_fetching_log.txt 2>&1
+0 * * * * PYTHONPATH=/home/jean/MediAnalyserPOC python3 /home/jean/MediAnalyserPOC/main/article_fetching.py >> /home/jean/MediAnalyserPOC/main/logs/article_fetching_log.txt 2>&1
 
-0 1 * * * PYTHONPATH=$(REPOPATH) python $(REPOPATH)/main/email_push_notification.py >> $(REPOPATH)/main/logs/email_push_notifications_log.txt 2>&1
+0 1 * * * PYTHONPATH=/home/jean/MediAnalyserPOC python3 /home/jean/MediAnalyserPOC/main/email_push_notification.py >> /home/jean/MediAnalyserPOC/main/logs/email_push_notifications_log.txt 2>&1
 
-# 0 1 * * * PYTHONPATH=$(REPOPATH) python $(REPOPATH)/main/ml_model_creation.py >> $(REPOPATH)/main/logs/ml_model_creation_log.txt 2>&1
+0 1 * * * PYTHONPATH=/home/jean/MediAnalyserPOC python3 /home/jean/MediAnalyserPOC/main/ml_model_creation.py >> /home/jean/MediAnalyserPOC/main/logs/ml_model_creation_log.txt 2>&1
