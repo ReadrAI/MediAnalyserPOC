@@ -1,23 +1,32 @@
-import requests
-import certifi
+import os
+import logging
+from xml.etree import ElementTree
 
-HOSTNAME = ".newshorizon.xyz"   # Namecheap hostname (including subdomain)
-APIKEY = "5f8193ee673742b3a46ea225e7f5db25"  # Namecheap DDNS Token (Accounts > Domain List > Advanced DNS)
+from utils import dns_utils
+from utils import mail_utils
+from utils.data_manager import DataManager
 
+log_file_name = DataManager.getModulePath() + os.sep + 'main' + os.sep + 'logs' + os.sep \
+    + 'email_push_notifications_log.txt'
+logging.basicConfig(filename=log_file_name, level=logging.ERROR)
 
-def getIP():
-    r = requests.get("https://ifconfig.co/json", verify=certifi.where()).json()
-    return r['ip']
+print("==================================")
+print("DNS Update Routine Started")
+print("Timestamp:", mail_utils.getCurrentTimestamp())
 
+past_ip = os.getenv('EXTIP', '')
+ip = dns_utils.getIP()
+if past_ip != ip:
+    os.environ['EXTIP'] = ip
+    print("External IP: " + ip)
+    r = dns_utils.updateRecord(ip)
+    errCount = ElementTree.fromstring(r.content).find("ErrCount").text
+    if int(errCount) > 0:
+        errText = ElementTree.fromstring(r.content).find("Err1").text
+        mail_utils.sendEmailNotification(errText, ip)
+        print("API error\n" + r.content)
+    else:
+        print("IP address successfully updated: %s" % ip)
+        mail_utils.sendEmailNotification("IP address successfully updated", ip)
 
-def updateRecord(ip):
-    global HOSTNAME
-    global APIKEY
-    d = HOSTNAME.find('.')
-    host = HOSTNAME[:d]
-    domain = HOSTNAME[(d+1):]
-    # DO NOT change the url "dynamicdns.park-your-domain.com". It's vaild domain provide by namecheap.
-    url = "https://dynamicdns.park-your-domain.com/update?host=" + host + "&domain=" + \
-        domain + "&password=" + APIKEY + "&ip=" + ip
-    print(url)
-    return requests.get(url, verify=certifi.where())
+print("DNS Update Routine Finished\n")

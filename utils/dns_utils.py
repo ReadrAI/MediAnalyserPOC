@@ -1,20 +1,23 @@
-import os
-from xml.etree import ElementTree
+import requests
+import certifi
 
-from utils import dns_utils
-from utils import mail_utils
+HOSTNAME = ".newshorizon.xyz"   # Namecheap hostname (including subdomain)
+APIKEY = "5f8193ee673742b3a46ea225e7f5db25"  # Namecheap DDNS Token (Accounts > Domain List > Advanced DNS)
 
-past_ip = os.getenv('EXTIP', '')
-ip = dns_utils.getIP()
-if past_ip != ip:
-    os.environ['EXTIP'] = ip
-    print("External IP: " + ip)
-    r = dns_utils.updateRecord(ip)
-    errCount = ElementTree.fromstring(r.content).find("ErrCount").text
-    if int(errCount) > 0:
-        errText = ElementTree.fromstring(r.content).find("Err1").text
-        mail_utils.sendEmailNotification(errText, ip)
-        print("API error\n" + r.content)
-    else:
-        print("Update IP success!")
-        mail_utils.sendEmailNotification("Update IP success!", ip)
+
+def getIP():
+    r = requests.get("https://ifconfig.co/json", verify=certifi.where()).json()
+    return r['ip']
+
+
+def updateRecord(ip):
+    global HOSTNAME
+    global APIKEY
+    d = HOSTNAME.find('.')
+    host = HOSTNAME[:d]
+    domain = HOSTNAME[(d+1):]
+    # DO NOT change the url "dynamicdns.park-your-domain.com". It's vaild domain provide by namecheap.
+    url = "https://dynamicdns.park-your-domain.com/update?host=" + host + "&domain=" + \
+        domain + "&password=" + APIKEY + "&ip=" + ip
+    print(url)
+    return requests.get(url, verify=certifi.where())
