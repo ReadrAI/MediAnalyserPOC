@@ -29,7 +29,11 @@ set to
 
 5. install nginx server
 
-6. install guincorn server
+6. grant permissions:
+
+'sudo chown jean:jean /var/run/'
+
+7. install guincorn server
 
 ### Concept of the app
 
