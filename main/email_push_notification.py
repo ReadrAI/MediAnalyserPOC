@@ -17,10 +17,10 @@ print("Timestamp:", mail_utils.getCurrentTimestamp())
 
 try:
     watch = mail_utils.setPushNotifications()
+    base = datetime.datetime(1970, 1, 1, tzinfo=pytz.timezone('Europe/Brussels'))
+    expiration = base + datetime.timedelta(milliseconds=int(watch['expiration']))
+    print("Expiration:", expiration.astimezone(tzlocal.get_localzone()).strftime("%Y.%m.%d %H:%M %Z"))
 except BaseException as e:
     mail_utils.sendEmailNotification('Email Push Notification Exception', e)
 
-base = datetime.datetime(1970, 1, 1, tzinfo=pytz.timezone('Europe/Brussels'))
-expiration = base + datetime.timedelta(milliseconds=int(watch['expiration']))
-print("Expiration:", expiration.astimezone(tzlocal.get_localzone()).strftime("%Y.%m.%d %H:%M %Z"))
 print("Email Push Notification Routine Finished\n")
