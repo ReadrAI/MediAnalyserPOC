@@ -5,7 +5,7 @@ from flask_migrate import Migrate, MigrateCommand
 
 from utils import sql_utils
 
-host = sql_utils.Host.LOCAL_JEAN   # TODO add env variable
+host = sql_utils.getHost()
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = sql_utils.getDBURLFromHost(host)

@@ -47,7 +47,7 @@ std_vars:
 	echo "export REPOPATH=/home/jean/MediAnalyserPOC" >> ~/.bashrc
 	echo "export PYTHONPATH=$$(PYTHONPATH):$$(REPOPATH)" >> ~/.bashrc
 	echo "export GOOGLE_APPLICATION_CREDENTIALS=$$(REPOPATH)/credentials/future-oasis-286707-c52c864bbc9e.json"  >> ~/.bashrc
-	echo "" >> ~/.bashrc
+	echo "export NHHOST=LOCAL_JEAN" >> ~/.bashrc
 	echo "#end newshorizonapp" >> ~/.bashrc
 
 nginx_settings:

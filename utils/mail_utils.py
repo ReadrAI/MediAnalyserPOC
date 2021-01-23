@@ -448,7 +448,7 @@ def pipelineEmails(host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
 
 
 def isBlocked(sender_email, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
-    if 'no-reply' in sender_email or 'support' in sender_email:
+    if 'no-reply' in sender_email or 'noreply' in sender_email or 'support' in sender_email:
         return True
     elif sql_utils.isCustomerBlocked(sender_email, host=host, schema=schema):
         return True

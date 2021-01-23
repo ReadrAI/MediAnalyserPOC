@@ -9,7 +9,7 @@ from utils import models
 from utils import mail_utils
 from utils.data_manager import DataManager
 
-host = sql_utils.Host.LOCAL_JEAN
+host = sql_utils.getHost()
 schema = models.schema
 
 log_file_name = DataManager.getModulePath() + os.sep + 'main' + os.sep + 'logs' + os.sep + 'article_fetching_log.txt'

@@ -45,6 +45,18 @@ class Host:
             return sqlalchemy.create_engine(getDBURLFromHost(cls), connect_args=connect_args)
 
 
+def getHost():
+    host_var = os.getenv('NHHOST')
+    if host_var == 'LOCAL_JEAN':
+        return Host.LOCAL_JEAN
+    elif host_var == 'G_CLOUD_SSL':
+        return Host.G_CLOUD_SSL
+    elif host_var == '':
+        raise ValueError('Host variable \'NHHOST\' not set.')
+    else:
+        raise ValueError('Host variable must be one of the following: [\'LOCAL_JEAN\', \'G_CLOUD_SSL\']')
+
+
 def getDBUrl(username, password, database, host, port, params={}):
     return 'postgres://' + username + ':' + password + '@' + host + ':' + str(port) + '/' + database
 
