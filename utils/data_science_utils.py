@@ -64,6 +64,7 @@ def createArticleDictionnary(attributes=list(w2v_attributes.keys()), host=sql_ut
                     article[attribute_i])
     DataManager.setTmpModel(Models.NEWS_DICT, news_dict)
     DataManager.setTmpModel(Models.NEWS_INDEX, list(news_dict.keys()))
+    return df.shape[0]
 
 
 def createWord2VectorModel(attributes=list(w2v_attributes.keys())):
@@ -85,6 +86,7 @@ def createWord2VectorModel(attributes=list(w2v_attributes.keys())):
         epochs=200)
     w2v_model.init_sims(replace=True)
     DataManager.setTmpModel(Models.W2V, w2v_model)
+    return w2v_size
 
 
 def createTFIDFModel(attribute, min_df=1, max_df=1., ngram_range=(1, 1)):
@@ -124,11 +126,12 @@ def createKNNModel(attributes=list(w2v_attributes.keys()), neighbors=5):
 
 
 def createNlpModels(attributes=list(w2v_attributes.keys()), schema=models.schema, host=sql_utils.Host.G_CLOUD_SSL):
-    createArticleDictionnary(host=host, schema=schema)
-    createWord2VectorModel(attributes=attributes)
+    article_count = createArticleDictionnary(host=host, schema=schema)
+    model_dim = createWord2VectorModel(attributes=attributes)
     createNewsVectors(attributes=attributes)
     createKNNModel(attributes=attributes)
     DataManager.validateModels([Models.NEWS_DICT, Models.NEWS_INDEX, Models.W2V, Models.NEWS_VECT, Models.KNN])
+    return article_count, model_dim
 
 
 def getTextEmbedding(search_text, attribute):
