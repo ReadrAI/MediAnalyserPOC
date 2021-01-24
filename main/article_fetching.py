@@ -24,8 +24,8 @@ print("Schema:", schema)
 
 try:
     count = scrape_utils.loadRoutine(host=host, schema=schema)
+    print("Article count:", count)
 except BaseException as e:
     mail_utils.sendEmailNotification('Article Fetching Exception', e)
 
-print("Article count:", count)
 print("Article Fetching Routine Finished\n")
