@@ -312,7 +312,8 @@ def __feedImporter(feed_data, feed, host=sql_utils.Host.G_CLOUD_SSL, schema=mode
         raise ValueError("No entries in feed for", feed.feed_url)
     if 'status' not in feed_data:
         logging.info("No status in feed for %s:%s" % (feed.source.source_name, feed.feed_url))
-        raise ValueError("No status in feed for %s:%s" % (feed.source.source_name, feed.feed_url))
+        return 0
+        # raise ValueError("No status in feed for %s:%s" % (feed.source.source_name, feed.feed_url))
     count = 0
     for a in feed_data['entries']:
         try:
