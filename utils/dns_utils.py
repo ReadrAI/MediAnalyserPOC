@@ -19,5 +19,4 @@ def updateRecord(ip):
     # DO NOT change the url "dynamicdns.park-your-domain.com". It's vaild domain provide by namecheap.
     url = "https://dynamicdns.park-your-domain.com/update?host=" + host + "&domain=" + \
         domain + "&password=" + APIKEY + "&ip=" + ip
-    print(url)
     return requests.get(url, verify=certifi.where())
