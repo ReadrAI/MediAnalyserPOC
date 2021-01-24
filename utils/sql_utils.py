@@ -54,7 +54,7 @@ def getHost():
     elif host_var == '':
         raise ValueError('Host variable \'NHHOST\' not set.')
     else:
-        raise ValueError('Host variable must be one of the following: [\'LOCAL_JEAN\', \'G_CLOUD_SSL\']')
+        raise ValueError('Host variable \'NHHOST\' must be one of the following: [\'LOCAL_JEAN\', \'G_CLOUD_SSL\']')
 
 
 def getDBUrl(username, password, database, host, port, params={}):
