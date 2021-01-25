@@ -96,7 +96,7 @@ def importNYT(data, source_name, schema=models.schema, host=sql_utils.Host.G_CLO
                 count += sql_utils.insertEntry(model_article, schema=schema, host=host)
 
     else:
-        logging.error("Data error: " + (data['status'] if 'status' in data.keys() else data))
+        logging.error("Data error: " + (data['status'] if 'status' in data.keys() else str(data)))
     return count
 
 
