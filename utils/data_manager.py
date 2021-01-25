@@ -13,7 +13,7 @@ class DataManager:
     @classmethod
     def getModulePath(cls):
         if cls.modulePath is None:
-            if os.getenv("REPOPATH") != '':
+            if os.getenv("REPOPATH") is not None:
                 cls.modulePath = os.getenv("REPOPATH")
             else:
                 for root, subdirs, files in os.walk(os.path.expanduser("~")):
