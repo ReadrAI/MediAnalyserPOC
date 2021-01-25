@@ -15,15 +15,12 @@ class DataManager:
         if cls.modulePath is not None:
             return cls.modulePath
         else:
-            for root, subdirs, files in os.walk(os.path.expanduser("~")):
-                for sd in subdirs:
-                    if sd == "MediAnalyserPOC":
-                        cls.modulePath = root + os.sep + sd
-                        return cls.modulePath
+            cls.modulePath = os.getenv("REPOPATH")
+            return cls.modulePath
 
     @classmethod
     def getModelPath(cls, model, tmp):
-        return cls.getModulePath() + os.sep + 'ml_models' + (os.sep + 'tmp' if tmp else '') + os.sep + model + '.pickle'
+        return cls.getModulePath() + os.sep + 'ml_models' + ((os.sep + 'tmp') if tmp else '') + os.sep + model + '.pickle'
 
     @classmethod
     def setTmpModel(cls, model, data):
