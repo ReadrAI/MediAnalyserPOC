@@ -470,17 +470,17 @@ def fetchEmails(host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
         if m['id'] not in past_requests and m['id'] not in invalid_emails:
             values = getMessageContent(m)
             request_email_i = parseEmail(values['from'])
-            if isBlocked(values['from'], host=host, schema=schema):
+            if values['from'] == SENDER_EMAIL:
+                sql_utils.insertEntry(models.InvalidEmail(
+                    gmail_request_uuid=m['id'] + "-response",
+                    customer_uuid=sql_utils.getOrSetCustomerID(request_email_i, host=host, schema=schema),
+                    status='SELF sender'
+                ), host=host, schema=schema)
+            elif isBlocked(values['from'], host=host, schema=schema):
                 sql_utils.insertEntry(models.InvalidEmail(
                     gmail_request_uuid=m['id'],
                     customer_uuid=sql_utils.getOrSetCustomerID(request_email_i, host=host, schema=schema),
                     status='NO-REPLY sender'
-                ), host=host, schema=schema)
-            elif values['from'] == SENDER_EMAIL:
-                sql_utils.insertEntry(models.InvalidEmail(
-                    gmail_request_uuid=m['id'],
-                    customer_uuid=sql_utils.getOrSetCustomerID(request_email_i, host=host, schema=schema),
-                    status='SELF sender'
                 ), host=host, schema=schema)
             else:
                 request_emails.append(values)
