@@ -393,7 +393,10 @@ def processEmails(request_emails, host=sql_utils.Host.G_CLOUD_SSL, schema=models
     count = 0
     for request_i in request_emails:
         logging.info("Processing request " + request_i['id'])
-        logging.info("Subject: " + request_i['subject'])
+        if 'subject' in request_i:
+            logging.info("Subject: " + request_i['subject'])
+        else:
+            request_i['subject'] = ''
 
         try:
             customer_uuid = getCustomer(request_i, host=host, schema=schema)
