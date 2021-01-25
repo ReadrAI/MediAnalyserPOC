@@ -228,7 +228,7 @@ def isCustomerBlocked(email, host=Host.G_CLOUD_SSL, schema=models.schema):
     is_blocked = getDBSession(host=host, schema=schema).query(models.Customer.is_blocked)\
         .filter(models.Customer.customer_email == email).first()
     if is_blocked is None:
-        return None
+        return False
     else:
         return is_blocked[0]
 
