@@ -178,4 +178,4 @@ class InvalidEmail(Base):
     customer = relationship("Customer")
 
     def __repr__(self):
-        return '<Invalid Email {}: {} - {}>'.format(self.invalid_email_uuid, self.status, self.customer.customer_email)
+        return '<Invalid Email {}: {} - {}>'.format(self.invalid_email_uuid, self.status, self.customer_uuid)
