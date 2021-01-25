@@ -54,4 +54,4 @@ nginx_settings:
 	cat main/nginx_setting.txt > /etc/nginx/sites-available/newshorizon
 
 max_ml_copy:
-	scp -p jean@5.149.19.251:/home/jean/Code/MediAnalyserPOC/ml_models/* ./
+	scp -p jean@5.149.19.251:/home/jean/Code/MediAnalyserPOC/ml_models/*.pickle /Users/jean/Documents/Coding/MediAnalyserPOC/ml_models/
