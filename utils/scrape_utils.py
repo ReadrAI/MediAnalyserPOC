@@ -51,7 +51,8 @@ def getFileName(topic, source_name, page=None):
 
 
 def scrapeArticleTitle(url):
-    page = requests.get(url)
+    headers = {'Content-type': 'application/json', 'Accept': 'text/plain', 'User-agent': 'Mozilla/5.0'}
+    page = requests.get(url, headers=headers)
     if page.status_code == 200:
         soup = BeautifulSoup(page.text, "html.parser")
         all_h1 = map(lambda x: x.text.replace("\n", ''), soup.find_all('h1'))
