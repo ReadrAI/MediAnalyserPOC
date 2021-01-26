@@ -47,7 +47,7 @@ def cleanText(text, to_remove=['PUNCT', 'PRON', 'SYM', 'NUM', 'ADP']):
 
 def createArticleDictionnary(attributes=list(w2v_attributes.keys()), host=sql_utils.getHost(),
                              schema=models.schema):
-    query = sql_utils.getRawArticlesQuery(n_days=8, host=host, schema=schema)
+    query = sql_utils.getRawArticlesQuery(n_days=30, host=host, schema=schema)
     df = pd.read_sql(query.statement, query.session.bind)
     news_dict = {}
     progress = 0
