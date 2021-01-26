@@ -11,6 +11,7 @@ import email
 import logging
 import os.path
 import datetime
+import tldextract
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from googleapiclient.discovery import build
@@ -225,7 +226,12 @@ def downloadArticle(article_search, host, schema=models.schema):
 
     source = sql_utils.getSourceFromUrl(article_search.search_url, host=host, schema=schema)
     if source is None:
-        # TODO: add source
+        source = sql_utils.insertEntry(models.Source(
+            website_url=scrape_utils.getRootUrl(article_search.search_url),
+            source_name=tldextract.extract(article_search.search_url).domain
+        ), host=host, schema=schema)
+
+    if source is None:
         return None
 
     if source.language != 'en':
