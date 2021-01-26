@@ -39,6 +39,7 @@ def saveData(data, name):
 
 
 def getRootUrl(article_url):
+    # TODO replace urlparse with tldextract
     parsed_uri = urlparse(article_url)
     return '{uri.scheme}://{uri.netloc}/'.format(uri=parsed_uri)
 
