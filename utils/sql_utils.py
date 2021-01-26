@@ -4,6 +4,7 @@ Util functions for postgres connections and sql
 
 import os
 import logging
+import tldextract
 import datetime
 from os.path import expanduser
 import psycopg2
@@ -133,43 +134,14 @@ def getSource(name, host, schema=models.schema):
 
 
 def getSourceFromUrl(url, host, schema=models.schema):
-    # bugged, please fix
-
-    def getStem(to_stem):
-        stem = urlparse(to_stem).netloc.split('.')
-        for s in stem:
-            if s.lower().startswith('the') and len(s) != 3:
-                stem = list([s[3:], 'the']) + stem
-        return sorted(list(filter(lambda x: 'www' not in x, stem)), key=len, reverse=True)
-
-    stem = getStem(url)
-    if len(stem) == 0:
-        return None
-
-    sources = []
-    i = 0
-    while len(sources) == 0 and len(stem) > 0:
-        sources = getDBSession(host=host, schema=schema).query(models.Source)\
-            .filter(sqlalchemy.func.lower(models.Source.website_url).contains(stem[i])).all()
-        if len(sources) == 0:
-            stem = stem[1:]
-
-    if len(sources) > 1:
-        for source_i in sources:
-            if ''.join(getStem(source_i.website_url)).lower() == ''.join(stem).lower() and len(stem) != 0:
-                return source_i
-        for i in range(len(stem) - 1):
-            sources = list(filter(lambda x: stem[i] in x.source_name.lower(), sources))
-            if len(sources) <= 1:
-                break
-
-    if len(sources) == 0:
-        logging.error("No source found for article " + str(url))
-        return None
-    elif len(sources) > 1:
-        logging.error("Multiple sources (%d) found for article %s" % (len(sources), url))
-        return None
-    return sources[0]
+    domain = tldextract.extract(url).domain
+    sources = getDBSession(host=host, schema=schema).query(models.Source)\
+        .filter(sqlalchemy.func.lower(models.Source.website_url).contains(domain)).all()
+    for source_i in sources:
+        if tldextract.extract(source_i.website_url).domain == domain:
+            return source_i
+    logging.error("No source found for article " + str(url))
+    return None
 
 
 def getSearch(gmail_request_uuid, host, schema=models.schema):
