@@ -193,7 +193,7 @@ def getOrSetSourceID(name, url, host=Host.G_CLOUD_SSL, schema=models.schema):
             insertEntry(models.Source(
                 source_name=name,
                 website_url=url_stem,
-            ))
+            ), host=host, schema=schema)
             source_uuid = getSourceID(name, host=host, schema=schema)
         else:
             logging.error("Could not add source %s with url %s: stem is %s." % (name, url, url_stem))
