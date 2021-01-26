@@ -98,7 +98,7 @@ def create_message(sender, to, subject, plain_text, html_text=None, thread_id=No
     return output
 
 
-def answerEmail(request_email, to, plain_text, html_text=None, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
+def answerEmail(request_email, to, plain_text, html_text=None, host=None, schema=models.schema):
     message = create_message(
         sender=SENDER_EMAIL,
         to=to,
@@ -218,7 +218,7 @@ def parseEmail(email_tag):
         return email_tag
 
 
-def downloadArticle(article_search, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
+def downloadArticle(article_search, host, schema=models.schema):
     title = scrape_utils.scrapeArticleTitle(article_search.search_url)
     if title is None:
         return None
@@ -306,13 +306,13 @@ def downloadArticle(article_search, host=sql_utils.Host.G_CLOUD_SSL, schema=mode
             return articles[0]
 
 
-def getCustomer(request, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
+def getCustomer(request, host, schema=models.schema):
     requester_email = parseEmail(request['from'])
     customer_uuid = sql_utils.getOrSetCustomerID(requester_email, host=host, schema=schema)
     return customer_uuid
 
 
-def addArticleSearch(customer_uuid, request, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
+def addArticleSearch(customer_uuid, request, host, schema=models.schema):
     article_search = models.ArticleSearch(gmail_request_uuid=request['id'], customer_uuid=str(customer_uuid),
                                           status='Processing')
     success = sql_utils.insertEntry(article_search, host=host, schema=schema)
@@ -321,7 +321,7 @@ def addArticleSearch(customer_uuid, request, host=sql_utils.Host.G_CLOUD_SSL, sc
     return article_search
 
 
-def getSearchUrl(article_search, request, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
+def getSearchUrl(article_search, request, host, schema=models.schema):
     search_url = getUrlFromText(request['subject'])
     if search_url is None:
         search_url = getUrlFromText(request['content'])
@@ -343,7 +343,7 @@ def getSearchUrl(article_search, request, host=sql_utils.Host.G_CLOUD_SSL, schem
     return article_search
 
 
-def getSearchArticle(article_search, request, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
+def getSearchArticle(article_search, request, host, schema=models.schema):
     search_article = sql_utils.getArticle(article_search.search_url, host=host, schema=schema)
     if search_article is None:
         search_article = downloadArticle(article_search, host=host, schema=schema)
@@ -364,7 +364,7 @@ def getSearchArticle(article_search, request, host=sql_utils.Host.G_CLOUD_SSL, s
     return article_search
 
 
-def getSearchResults(article_search, search_attribute, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
+def getSearchResults(article_search, search_attribute, host, schema=models.schema):
     search_results = data_science_utils.getSimilarArticlesFromText(
         article_search.article.title if search_attribute == 'title' else article_search.article.description,
         search_attribute, article_search.n_results * 3)
@@ -375,7 +375,7 @@ def getSearchResults(article_search, search_attribute, host=sql_utils.Host.G_CLO
     return search_results.head(article_search.n_results)
 
 
-def sendResults(article_search, search_results, request, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
+def sendResults(article_search, search_results, request, host, schema=models.schema):
     html_text = search_results[['source_name', 'title_url']].to_html(escape=False, header=False, index=False)
     plain_text = search_results[['source_name', 'title']].to_string(header=False, index=False)
     sent_message = answerEmail(request_email=request, to=article_search.customer.customer_email,
@@ -389,7 +389,7 @@ def sendResults(article_search, search_results, request, host=sql_utils.Host.G_C
         return True
 
 
-def processEmails(request_emails, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
+def processEmails(request_emails, host, schema=models.schema):
     count = 0
     for request_i in request_emails:
         logging.info("Processing request " + request_i['id'])
@@ -441,7 +441,7 @@ def __addUrlLinks(entry):
     return '<a href="' + entry['article_url'] + '">' + entry['title'] + '</a>'
 
 
-def pipelineEmails(host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
+def pipelineEmails(host, schema=models.schema):
     logging.debug("### Email pipeline started at " + getCurrentTimestamp())
     emails = fetchEmails(host=host, schema=schema)
     count = processEmails(emails, host=host, schema=schema)
@@ -450,7 +450,7 @@ def pipelineEmails(host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
     return count
 
 
-def isBlocked(sender_email, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
+def isBlocked(sender_email, host, schema=models.schema):
     if 'no-reply' in sender_email or 'noreply' in sender_email or 'support' in sender_email:
         return True
     elif sql_utils.isCustomerBlocked(sender_email, host=host, schema=schema):
@@ -459,7 +459,7 @@ def isBlocked(sender_email, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schem
         return False
 
 
-def fetchEmails(host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
+def fetchEmails(host, schema=models.schema):
     service = getGmailService()
     messages = get_messages(service, 'me')
     past_requests = sql_utils.getSearchMailIDs(host=host, schema=schema)
@@ -503,7 +503,7 @@ def sendEmailNotification(subject, plain_text):
         logging.error("Notification not sent at " + getCurrentTimestamp() + ": " + subject + "\n" + plain_text)
 
 
-def processFailedArticleSearches(host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
+def processFailedArticleSearches(host, schema=models.schema):
     count = 0
     uncompleted_article_searches = sql_utils.getUncompletedArticleSearches(host=host, schema=schema)
     for article_search in uncompleted_article_searches:
@@ -531,7 +531,7 @@ def processFailedArticleSearches(host=sql_utils.Host.G_CLOUD_SSL, schema=models.
     return count
 
 
-def renewEmailAnalysis(article_search, host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
+def renewEmailAnalysis(article_search, host, schema=models.schema):
     sql_utils.getDBSession(host=host, schema=schema).delete(article_search)
     sql_utils.commitSession(host=host, schema=schema)
     return pipelineEmails(host=host, schema=schema) >= 1

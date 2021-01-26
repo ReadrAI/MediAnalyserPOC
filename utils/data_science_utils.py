@@ -45,7 +45,7 @@ def cleanText(text, to_remove=['PUNCT', 'PRON', 'SYM', 'NUM', 'ADP']):
     return ' '.join([y.lemma_ for y in nlp(text.lower()) if not y.is_stop and y.pos_ not in to_remove])
 
 
-def createArticleDictionnary(attributes=list(w2v_attributes.keys()), host=sql_utils.Host.G_CLOUD_SSL,
+def createArticleDictionnary(attributes=list(w2v_attributes.keys()), host=sql_utils.getHost(),
                              schema=models.schema):
     query = sql_utils.getRawArticlesQuery(n_days=8, host=host, schema=schema)
     df = pd.read_sql(query.statement, query.session.bind)
@@ -125,7 +125,7 @@ def createKNNModel(attributes=list(w2v_attributes.keys()), neighbors=5):
     DataManager.setTmpModel(Models.KNN, neighbours)
 
 
-def createNlpModels(attributes=list(w2v_attributes.keys()), schema=models.schema, host=sql_utils.Host.G_CLOUD_SSL):
+def createNlpModels(attributes=list(w2v_attributes.keys()), host=sql_utils.getHost(), schema=models.schema):
     article_count = createArticleDictionnary(host=host, schema=schema)
     model_dim = createWord2VectorModel(attributes=attributes)
     createNewsVectors(attributes=attributes)
@@ -162,8 +162,8 @@ def getTextEmbedding(search_text, attribute):
         return embedding
 
 
-def getSimilarArticlesFromText(search_text, attribute='title', nb_articles=10, schema=models.schema,
-                               host=sql_utils.Host.G_CLOUD_SSL):
+def getSimilarArticlesFromText(search_text, attribute='title', nb_articles=10, host=sql_utils.getHost(),
+                               schema=models.schema):
     news_index = DataManager.getModel(Models.NEWS_INDEX)
     neighbours = DataManager.getModel(Models.KNN)
     embedding = getTextEmbedding(search_text, attribute)

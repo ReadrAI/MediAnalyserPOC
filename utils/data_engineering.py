@@ -10,7 +10,7 @@ from utils import sql_utils
 from utils import translate_utils
 
 
-def correctArticleLanguage(host=sql_utils.Host.G_CLOUD_SSL, schema=models.schema):
+def correctArticleLanguage(host, schema=models.schema):
     count = 0
     articles_by_language = sql_utils.getDBSession(host=host, schema=schema).query(
             sqlalchemy.func.array_agg(models.Article.article_uuid), models.Source.language
