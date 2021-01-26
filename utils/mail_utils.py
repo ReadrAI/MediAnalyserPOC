@@ -478,7 +478,7 @@ def fetchEmails(host, schema=models.schema):
             request_email_i = parseEmail(values['from'])
             if values['from'] == SENDER_EMAIL:
                 sql_utils.insertEntry(models.InvalidEmail(
-                    gmail_request_uuid=m['id'] + "-response",
+                    gmail_request_uuid=m['id'],
                     customer_uuid=sql_utils.getOrSetCustomerID(request_email_i, host=host, schema=schema),
                     status='SELF sender'
                 ), host=host, schema=schema)
