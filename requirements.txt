@@ -24,3 +24,4 @@ num2words
 gunicorn
 grpcio
 tldextract
+beautifulsoup4

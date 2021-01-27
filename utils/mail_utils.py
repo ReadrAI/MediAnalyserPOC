@@ -12,6 +12,7 @@ import logging
 import os.path
 import datetime
 import tldextract
+from bs4 import BeautifulSoup
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from googleapiclient.discovery import build
@@ -189,9 +190,13 @@ def getMessageContent(message):
             if 'headers' in raw['payload']:
                 for entry in raw['payload']['headers']:
                     values[entry['name'].lower()] = entry['value']
-            if 'parts' in raw['payload'] and len(raw['payload']['parts']) > 0 and 'body' in raw['payload']['parts'][0]\
-                    and 'data' in raw['payload']['parts'][0]['body']:
-                values['content'] = decode(raw['payload']['parts'][0]['body']['data'])
+            if 'parts' in raw['payload'] and len(raw['payload']['parts']) > 0:
+                if 'body' in raw['payload']['parts'][0] and 'data' in raw['payload']['parts'][0]['body']:
+                    values['content'] = decode(raw['payload']['parts'][0]['body']['data'])
+                if len(raw['payload']['parts']) > 1 and 'body' in raw['payload']['parts'][1] and\
+                        'data' in raw['payload']['parts'][1]['body']:
+                    html = decode(raw['payload']['parts'][1]['body']['data'])
+                    values['url'] = BeautifulSoup(html, 'lxml').find('a')['href']
             elif 'body' in raw['payload'] and 'data' in raw['payload']['body']:
                 values['content'] = decode(raw['payload']['body']['data'])
             else:
@@ -206,7 +211,7 @@ def decode(text):
 
 
 def getUrlFromText(text):
-    reg = re.search("(?P<url>https?://[^\s?>\"]+)", text)
+    reg = re.search("(?P<url>https?://[^\s>\"]+)", text)
     if reg is not None:
         return reg.group("url")
 
@@ -328,7 +333,13 @@ def addArticleSearch(customer_uuid, request, host, schema=models.schema):
 
 
 def getSearchUrl(article_search, request, host, schema=models.schema):
-    search_url = getUrlFromText(request['subject'])
+    search_url = None
+    if 'url' in request:
+        search_url = request['url']
+
+    if search_url is None:
+        search_url = getUrlFromText(request['subject'])
+
     if search_url is None:
         search_url = getUrlFromText(request['content'])
 
