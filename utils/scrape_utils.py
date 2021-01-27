@@ -62,7 +62,7 @@ def scrapeArticleTitle(url):
         all_h1 = map(lambda x: x.text.replace("\n", ''), soup.find_all('h1'))
         title = list(filter(lambda x: x != '' and len(x.split(' ')) > 2, all_h1))
         if len(title) == 0:
-            all_titles = map(lambda x: x.text.replace("\n", ''), soup.find_all('h1'))
+            all_titles = map(lambda x: x.text.replace("\n", ''), soup.find_all('title'))
             title = list(filter(lambda x: x != '' and len(x.split(' ')) > 2, all_titles))
             if len(title) == 0:
                 return None
