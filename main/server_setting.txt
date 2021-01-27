@@ -5,10 +5,13 @@ After=network.target
 [Service]
 User=jean
 Group=www-data
-WorkingDirectory=$(REPOPATH)/flask_app
-Environment="PATH=/usr/bin/python"
-EnvironmentFile=$(REPOPATH)/flask_app/.env
-ExecStart=/usr/local/bin/gunicorn --workers 3 --bind unix:/var/run/newshorizon.sock --pythonpath $(REPOPATH) wsgi:app
+WorkingDirectory=/home/jean/Code/MediAnalyserPOC/flask_app
+Environment="PATH=/usr/bin/python3"
+Environment="NHHOST=LOCAL_JEAN"
+Environment="REPOPATH=/home/jean/Code/MediAnalyserPOC"
+Environment="GOOGLE_APPLICATION_CREDENTIALS=$REPOPATH/credentials/future-oasis-286707-c52c864bbc9e.json"
+EnvironmentFile=/home/jean/Code/MediAnalyserPOC/flask_app/.env
+ExecStart=/usr/bin/gunicorn --workers 3 --bind unix:/var/run/newshorizon.sock --pythonpath /home/jean/Code/MediAnalyserPOC wsgi:app
 
 
 [Install]
