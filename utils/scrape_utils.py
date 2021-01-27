@@ -52,14 +52,18 @@ def getFileName(topic, source_name, page=None):
 
 
 def scrapeArticleTitle(url):
-    headers = {'Content-type': 'application/json', 'Accept': 'text/plain', 'User-agent': 'Mozilla/5.0'}
-    page = requests.get(url, headers=headers)
+    headers = {
+        'User-agent': ('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko)'
+                       'Chrome/88.0.4324.96 Safari/537.36'),
+        'referer': 'https://stackoverflow.com/'}
+    page = requests.get(url, headers=headers, allow_redirects=True)
     if page.status_code == 200:
         soup = BeautifulSoup(page.text, "html.parser")
         all_h1 = map(lambda x: x.text.replace("\n", ''), soup.find_all('h1'))
         title = list(filter(lambda x: x != '' and len(x.split(' ')) > 2, all_h1))
         if len(title) == 0:
-            title = list(filter(lambda x: x != '', all_h1))
+            all_titles = map(lambda x: x.text.replace("\n", ''), soup.find_all('h1'))
+            title = list(filter(lambda x: x != '' and len(x.split(' ')) > 2, all_titles))
             if len(title) == 0:
                 return None
         return title[0]
