@@ -133,7 +133,7 @@ def send_message(service, user_id, message):
         return None
 
 
-def get_messages(service, user_id):
+def get_message_list(service, user_id):
     try:
         return service.users().messages().list(userId=user_id).execute()
     except Exception as error:
@@ -196,7 +196,10 @@ def getMessageContent(message):
                 if len(raw['payload']['parts']) > 1 and 'body' in raw['payload']['parts'][1] and\
                         'data' in raw['payload']['parts'][1]['body']:
                     html = decode(raw['payload']['parts'][1]['body']['data'])
-                    values['url'] = BeautifulSoup(html, 'lxml').find('a')['href']
+                    links = BeautifulSoup(html, 'lxml').find_all('a', href=True)
+                    found_urls = [l_i['href'] for l_i in links if not l_i['href'].startswith('mailto:')]
+                    if len(found_urls) > 0:
+                        values['url'] = found_urls[0]
             elif 'body' in raw['payload'] and 'data' in raw['payload']['body']:
                 values['content'] = decode(raw['payload']['body']['data'])
             else:
@@ -478,7 +481,7 @@ def isBlocked(sender_email, host, schema=models.schema):
 
 def fetchEmails(host, schema=models.schema):
     service = getGmailService()
-    messages = get_messages(service, 'me')
+    messages = get_message_list(service, 'me')
     past_requests = sql_utils.getSearchMailIDs(host=host, schema=schema)
     invalid_emails = sql_utils.getInvalidEmailIDs(host=host, schema=schema)
     logging.debug("### %d emails to fetch" % len(messages['messages']))
