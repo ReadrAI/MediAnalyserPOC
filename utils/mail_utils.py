@@ -11,6 +11,7 @@ import email
 import logging
 import os.path
 import datetime
+import threading
 import tldextract
 from bs4 import BeautifulSoup
 from email.mime.text import MIMEText
@@ -41,12 +42,15 @@ def getCurrentTimestamp():
 
 
 def getGmailService():
-    global service
+    global services
     try:
-        service
+        services
     except (NameError, UnboundLocalError):
-        service = __createGmailService()
-    return service
+        services = {}
+    thread_id = threading.get_ident()
+    if thread_id not in services:
+        services[thread_id] = __createGmailService()
+    return services[thread_id]
 
 
 def __createGmailService():
@@ -101,6 +105,7 @@ def create_message(sender, to, subject, plain_text, html_text=None, thread_id=No
 
 
 def answerEmail(request_email, to, plain_text, html_text=None, host=None, schema=models.schema):
+    service = getGmailService()
     message = create_message(
         sender=SENDER_EMAIL,
         to=to,
