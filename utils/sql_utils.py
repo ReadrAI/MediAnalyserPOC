@@ -5,6 +5,7 @@ Util functions for postgres connections and sql
 import os
 import logging
 import tldextract
+import threading
 import datetime
 from os.path import expanduser
 import psycopg2
@@ -78,15 +79,18 @@ def getEngine(connect_args={}, host=getHost(), schema=models.schema):
         engines
     except (NameError, UnboundLocalError):
         engines = {}
-    if host.name not in engines:
-        engines[host.name] = {}
-    if schema not in engines[host.name]:
+    thread_id = threading.get_ident()
+    if thread_id not in engines:
+        engines[thread_id] = {}
+    if host.name not in engines[thread_id]:
+        engines[thread_id][host.name] = {}
+    if schema not in engines[thread_id][host.name]:
         if schema is not None:
             if 'options' not in connect_args:
                 connect_args['options'] = ''
             connect_args['options'] = connect_args['options'] + '-csearch_path=' + schema
-        engines[host.name][schema] = host.createEngine(connect_args)
-    return engines[host.name][schema]
+        engines[thread_id][host.name][schema] = host.createEngine(connect_args)
+    return engines[thread_id][host.name][schema]
 
 
 # This function should not be called outside of sql_utils.
@@ -96,16 +100,19 @@ def getDBSession(host, schema=models.schema):
         sessions
     except (NameError, UnboundLocalError):
         sessions = {}
-    if schema not in sessions:
+    thread_id = threading.get_ident()
+    if thread_id not in sessions:
+        sessions[thread_id] = {}
+    if schema not in sessions[thread_id]:
         Session = sessionmaker(bind=getEngine(host=host, schema=schema))
-        sessions[schema] = Session()
+        sessions[thread_id][schema] = Session()
     try:
-        sessions[schema].commit()
+        sessions[thread_id][schema].commit()
     except Exception as e:
-        sessions[schema].rollback()
+        sessions[thread_id][schema].rollback()
         logging.error('Rolled back session (%s, %s)' % (host.host, schema))
         logging.error(e)
-    return sessions[schema]
+    return sessions[thread_id][schema]
 
 
 def dropAllTables(host, schema=models.schema):
@@ -214,6 +221,7 @@ def blockCustomer(email, host, schema=models.schema):
             commitSession(host=host, schema=schema)
             return True
         except Exception:
+            rollbackSession(host=host, schema=schema)
             return False
     return False
 
@@ -309,6 +317,10 @@ def rollbackSession(host, schema=models.schema):
 
 def commitSession(host, schema=models.schema):
     getDBSession(host=host, schema=schema).commit()
+
+
+def closeSession(host, schema=models.schema):
+    getDBSession(host=host, schema=schema).close()
 
 
 def getUncompletedArticleSearches(host, schema=models.schema):

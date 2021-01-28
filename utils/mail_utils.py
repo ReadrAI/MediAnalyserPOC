@@ -467,6 +467,7 @@ def pipelineEmails(host, schema=models.schema):
     count = processEmails(emails, host=host, schema=schema)
     logging.debug("### Email pipeline done at " + getCurrentTimestamp())
     logging.info("Answered Email Count: " + str(count))
+    sql_utils.closeSession(host=host, schema=schema)
     return count
 
 
