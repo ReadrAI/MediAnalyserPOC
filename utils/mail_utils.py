@@ -489,21 +489,24 @@ def fetchEmails(host, schema=models.schema):
     for m in messages['messages']:
         if m['id'] not in past_requests and m['id'] not in invalid_emails:
             values = getMessageContent(m)
-            request_email_i = parseEmail(values['from'])
-            if values['from'] == SENDER_EMAIL:
-                sql_utils.insertEntry(models.InvalidEmail(
-                    gmail_request_uuid=m['id'],
-                    customer_uuid=sql_utils.getOrSetCustomerID(request_email_i, host=host, schema=schema),
-                    status='SELF sender'
-                ), host=host, schema=schema)
-            elif isBlocked(values['from'], host=host, schema=schema):
-                sql_utils.insertEntry(models.InvalidEmail(
-                    gmail_request_uuid=m['id'],
-                    customer_uuid=sql_utils.getOrSetCustomerID(request_email_i, host=host, schema=schema),
-                    status='NO-REPLY sender'
-                ), host=host, schema=schema)
+            if 'from' in values:
+                request_email_i = parseEmail(values['from'])
+                if values['from'] == SENDER_EMAIL:
+                    sql_utils.insertEntry(models.InvalidEmail(
+                        gmail_request_uuid=m['id'],
+                        customer_uuid=sql_utils.getOrSetCustomerID(request_email_i, host=host, schema=schema),
+                        status='SELF sender'
+                    ), host=host, schema=schema)
+                elif isBlocked(values['from'], host=host, schema=schema):
+                    sql_utils.insertEntry(models.InvalidEmail(
+                        gmail_request_uuid=m['id'],
+                        customer_uuid=sql_utils.getOrSetCustomerID(request_email_i, host=host, schema=schema),
+                        status='NO-REPLY sender'
+                    ), host=host, schema=schema)
+                else:
+                    request_emails.append(values)
             else:
-                request_emails.append(values)
+                logging.error("No key 'from' in values for message %s" % m['id'])
     return request_emails
 
 
