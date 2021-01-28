@@ -481,33 +481,37 @@ def isBlocked(sender_email, host, schema=models.schema):
 
 
 def fetchEmails(host, schema=models.schema):
+    request_emails = []
     service = getGmailService()
     messages = get_message_list(service, 'me')
     past_requests = sql_utils.getSearchMailIDs(host=host, schema=schema)
     invalid_emails = sql_utils.getInvalidEmailIDs(host=host, schema=schema)
-    logging.debug("### %d emails to fetch" % len(messages['messages']))
-    request_emails = []
-    for m in messages['messages']:
-        if m['id'] not in past_requests and m['id'] not in invalid_emails:
-            values = getMessageContent(m)
-            if 'from' in values:
-                request_email_i = parseEmail(values['from'])
-                if values['from'] == SENDER_EMAIL:
-                    sql_utils.insertEntry(models.InvalidEmail(
-                        gmail_request_uuid=m['id'],
-                        customer_uuid=sql_utils.getOrSetCustomerID(request_email_i, host=host, schema=schema),
-                        status='SELF sender'
-                    ), host=host, schema=schema)
-                elif isBlocked(values['from'], host=host, schema=schema):
-                    sql_utils.insertEntry(models.InvalidEmail(
-                        gmail_request_uuid=m['id'],
-                        customer_uuid=sql_utils.getOrSetCustomerID(request_email_i, host=host, schema=schema),
-                        status='NO-REPLY sender'
-                    ), host=host, schema=schema)
+    if messages is not None and past_requests is not None and invalid_emails is not None:
+        logging.debug("### %d emails to fetch" % len(messages['messages']))
+        for m in messages['messages']:
+            if m['id'] not in past_requests and m['id'] not in invalid_emails:
+                values = getMessageContent(m)
+                if 'from' in values:
+                    request_email_i = parseEmail(values['from'])
+                    if values['from'] == SENDER_EMAIL:
+                        sql_utils.insertEntry(models.InvalidEmail(
+                            gmail_request_uuid=m['id'],
+                            customer_uuid=sql_utils.getOrSetCustomerID(request_email_i, host=host, schema=schema),
+                            status='SELF sender'
+                        ), host=host, schema=schema)
+                    elif isBlocked(values['from'], host=host, schema=schema):
+                        sql_utils.insertEntry(models.InvalidEmail(
+                            gmail_request_uuid=m['id'],
+                            customer_uuid=sql_utils.getOrSetCustomerID(request_email_i, host=host, schema=schema),
+                            status='NO-REPLY sender'
+                        ), host=host, schema=schema)
+                    else:
+                        request_emails.append(values)
                 else:
-                    request_emails.append(values)
-            else:
-                logging.error("No key 'from' in values for message %s" % m['id'])
+                    logging.error("No key 'from' in values for message %s" % m['id'])
+    else:
+        logging.debug("### No email to fetch: loading error. %s, %s, %s" % (
+            str(messages is None), str(past_requests is None), str(invalid_emails is None)))
     return request_emails
 
 
