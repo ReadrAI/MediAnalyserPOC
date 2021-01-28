@@ -36,6 +36,11 @@ def hello():
     return "<h1 style='color:blue'>Hello There!</h1>"
 
 
+@app.route("/dashboard", methods=['GET'])
+def dashboard():
+    return "<h1 style='color:red'>Hello There!</h1>"
+
+
 @app.route('/favicon.ico')
 def favicon():
     return send_from_directory(os.path.join(app.root_path, 'static'),
