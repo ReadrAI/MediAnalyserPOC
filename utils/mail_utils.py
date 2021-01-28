@@ -239,11 +239,13 @@ def downloadArticle(article_search, host, schema=models.schema):
 
     source = sql_utils.getSourceFromUrl(article_search.search_url, host=host, schema=schema)
     if source is None:
-        source = sql_utils.insertEntry(models.Source(
+        source_entry = models.Source(
             website_url=scrape_utils.getRootUrl(article_search.search_url),
             source_name=tldextract.extract(article_search.search_url).domain
-        ), host=host, schema=schema)
-
+        )
+        source_added = sql_utils.insertEntry(source_entry, host=host, schema=schema)
+        if source_added:
+            source = source_entry
     if source is None:
         return None
 
@@ -458,7 +460,7 @@ def processEmails(request_emails, host, schema=models.schema):
                     notification_content += "content:\n%s\n" % request_i['content']
             notification_content += "error:\n%s\n" % e
             sendEmailNotification("Pipeline Error", notification_content)
-            # raise e
+            raise e
     return count
 
 
