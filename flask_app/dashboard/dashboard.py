@@ -3,6 +3,7 @@ import functools
 import numpy as np
 import pandas as pd
 from datetime import datetime
+from dateutil.relativedelta import relativedelta
 from flask import render_template, make_response, request, Blueprint
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
@@ -50,12 +51,19 @@ def plot_search_occurence():
     asd = sql_utils.getArticleSearchDates(sql_utils.getHost())
     distinct_dates = list(set(functools.reduce(lambda a, b: a + b[1], asd, [])))
     distinct_dates.sort()
+    max_y = 0
     for i in range(len(asd)):
         elems = np.array([asd[i][1].count(d) for d in distinct_dates])
         label = asd[i][0] if asd[i][0] != '' else 'FAILURE: Pipeline error'
         axis.plot(distinct_dates, elems, label=label)
-    axis.set_xticks(distinct_dates)
-    axis.set_xticklabels(distinct_dates, rotation=75, ha='center')
+        max_y = max(max_y, max(elems))
+    tick_dates = pd.date_range(
+        str(distinct_dates[0]),
+        str(distinct_dates[-1] - pd.offsets.MonthBegin(1) + relativedelta(months=1)), freq='1M'
+    ) - pd.offsets.MonthBegin(1)
+    axis.set_xticks(tick_dates)
+    axis.set_xticklabels(tick_dates, rotation=75, ha='center')
+    axis.set_yticks(range(0, max_y + 1, 5))
     axis.set_title('Article Search Occurences')
     axis.legend()
     canvas = FigureCanvas(fig)
