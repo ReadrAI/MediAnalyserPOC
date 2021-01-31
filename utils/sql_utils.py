@@ -350,10 +350,12 @@ def getSourceRssShare(host, schema=models.schema):
 
 def getSearchSourceRssShare(host, schema=models.schema):
     srs = getDBSession(host=host, schema=schema).query(
-        models.ArticleSearch.source_uuid, func.count(models.RSSFeed.feed_uuid).label('rss_feed_count')
+        models.Article.source_uuid, func.count(models.RSSFeed.feed_uuid).label('rss_feed_count')
     ).join(
-        models.RSSFeed, models.RSSFeed.source_uuid == models.ArticleSearch.source_uuid, isouter=True
+        models.ArticleSearch, models.ArticleSearch.search_article == models.Article.article_uuid, isouter=False
+    ).join(
+        models.RSSFeed, models.RSSFeed.source_uuid == models.Article.source_uuid, isouter=True
     ).group_by(
-        models.ArticleSearch.source_uuid
+        models.Article.source_uuid
     ).all()
     return functools.reduce(lambda a, b: a + (b[1] > 0), srs, 0), len(srs)
