@@ -75,7 +75,8 @@ def getDBURLFromHost(host):
 
 
 # This function should not be called outside of sql_utils.
-def getEngine(connect_args={}, host=getHost(), schema=models.schema):
+def getEngine(host, schema=models.schema):
+    connect_args = {}
     global engines
     try:
         engines
@@ -242,7 +243,7 @@ def getInvalidEmailIDs(host, schema=models.schema):
     return [i[0] for i in getDBSession(host=host, schema=schema).query(models.InvalidEmail.gmail_request_uuid).all()]
 
 
-def getRawArticlesQuery(n_days=None, host=getHost(), schema=models.schema):
+def getRawArticlesQuery(n_days, host, schema=models.schema):
     query = getDBSession(host=host, schema=schema).query(
         models.Article.article_uuid, models.Article.title,
         models.Article.description, models.ArticleContent.article_content
@@ -270,7 +271,7 @@ def insertEntry(entry, host, schema=models.schema):
         return False
 
 
-def populateFeeds(source_name, feed_url, section=None, host=getHost(), schema=models.schema):
+def populateFeeds(source_name, feed_url, section, host, schema=models.schema):
     source_uuid = getSourceID(source_name, host=host, schema=schema)
     return insertEntry(models.RSSFeed(
         source_uuid=source_uuid,
