@@ -7,9 +7,11 @@ import logging
 import tldextract
 import threading
 import datetime
+import functools
 from os.path import expanduser
 import psycopg2
 import sqlalchemy
+from sqlalchemy import func, Date
 from sqlalchemy.orm import sessionmaker
 from urllib.parse import urlparse
 
@@ -326,3 +328,31 @@ def closeSession(host, schema=models.schema):
 def getUncompletedArticleSearches(host, schema=models.schema):
     return getDBSession(host=host, schema=schema).query(models.ArticleSearch).filter(
         models.ArticleSearch.status == 'FAILURE: Article not found').all()
+
+
+def getArticleSearchDates(host, schema=models.schema):
+    return getDBSession(host=host, schema=schema).query(
+        models.ArticleSearch.status, func.array_agg(models.ArticleSearch.received_at.cast(Date))
+    ).group_by(models.ArticleSearch.status).all()
+
+
+def getSourceRssShare(host, schema=models.schema):
+    srs = getDBSession(host=host, schema=schema).query(
+        models.Source, func.count(models.RSSFeed.feed_uuid).label('rss_feed_count')
+    ).join(
+        models.RSSFeed, models.RSSFeed.source_uuid == models.Source.source_uuid, isouter=True
+    ).group_by(
+        models.Source.source_uuid
+    ).all()
+    return functools.reduce(lambda a, b: a + (b[1] > 0), srs, 0), len(srs)
+
+
+def getSearchSourceRssShare(host, schema=models.schema):
+    srs = getDBSession(host=host, schema=schema).query(
+        models.ArticleSearch.source_uuid, func.count(models.RSSFeed.feed_uuid).label('rss_feed_count')
+    ).join(
+        models.RSSFeed, models.RSSFeed.source_uuid == models.ArticleSearch.source_uuid, isouter=True
+    ).group_by(
+        models.ArticleSearch.source_uuid
+    ).all()
+    return functools.reduce(lambda a, b: a + (b[1] > 0), srs, 0), len(srs)

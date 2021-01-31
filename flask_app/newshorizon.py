@@ -8,6 +8,7 @@ from flask import Flask
 from flask import send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 
+from flask_app.dashboard import dashboard
 from utils.data_manager import DataManager
 from utils import mail_utils
 from utils import models
@@ -16,6 +17,8 @@ from utils import sql_utils
 host = sql_utils.getHost()
 
 app = Flask(__name__)
+app.register_blueprint(dashboard.dashboard_app)
+
 app.config['SQLALCHEMY_DATABASE_URI'] = sql_utils.getDBURLFromHost(host)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -36,11 +39,6 @@ def hello():
     return "<h1 style='color:blue'>Hello There!</h1>"
 
 
-@app.route("/dashboard", methods=['GET'])
-def dashboard():
-    return "<h1 style='color:red'>Hello There!</h1>"
-
-
 @app.route('/favicon.ico')
 def favicon():
     return send_from_directory(os.path.join(app.root_path, 'static'),
@@ -48,4 +46,4 @@ def favicon():
 
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0')
+    app.run(host='0.0.0.0', port=5000)

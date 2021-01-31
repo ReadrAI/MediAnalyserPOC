@@ -26,3 +26,4 @@ grpcio
 tldextract
 beautifulsoup4
 lxml
+mathplotlib

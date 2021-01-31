@@ -143,7 +143,9 @@ https://www.datadoghq.com/blog/nginx-502-bad-gateway-errors-gunicorn/
 
 https://certbot.eff.org/lets-encrypt/debianbuster-nginx
 
-## Possible News Sources
+https://flask.palletsprojects.com/en/1.1.x/quickstart/
+
+### Possible News Sources
 
 https://about.proquest.com/products-services/news-newspapers/Global-Breaking-Newswires.html
 
@@ -153,7 +155,7 @@ https://about.proquest.com/products-services/news-newspapers/Newspaperscom-Libra
 
 https://about.proquest.com/products-services/news-newspapers/?selectFilter-search=Public&selectFilterTwo-search=News+and+Issues
 
-## Network
+### Network
 
 https://linuxconfig.org/how-to-configure-static-ip-address-on-ubuntu-18-04-bionic-beaver-linux
 
@@ -162,3 +164,7 @@ https://netplan.io/examples/
 https://www.ubuntu18.com/ubuntu-change-ssh-port/
 
 http://www.artdecoded.net/blog/how-to-change-the-ssh-port-in-mac-os-x/
+
+### Data Visualisation
+
+https://medium.com/@rovai/from-data-to-graph-a-web-jorney-with-flask-and-sqlite-6c2ec9c0ad0

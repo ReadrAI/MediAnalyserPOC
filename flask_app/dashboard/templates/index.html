@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+   <head>
+      <title>NewsHorizon Dashboard</title>
+      <link rel="stylesheet" href='../static/style.css'/>
+   </head>
+   <body>
+	<h1>NewsHorizon Dashboard</h1>
+   	<h3> State as of  {{ datetime }}</h3>
+	<h3> Host  {{ host }}</h3>
+	<h3> Dashboard Version  {{ version }}</h3>
+	<hr>	
+	<h3> Last Sensors Reading: {{ time }} ==> <a href="/dashboard"class="button">REFRESH</a></h3>	
+	<hr>
+	<h3> HISTORICAL DATA </h3>
+	<p> Enter number of samples to retrieve:
+	<form action="/dashboard" method="POST">
+		<input name="numSamples" value= {{numSamples}}>
+		<input type="submit">
+		</form></p>
+	<hr>
+	<img src="/plot/article-search-occurence" alt="Image Placeholder" width="49%">
+	<img src="/plot/rss-feed-availability" alt="Image Placeholder" width="49%">
+   </body>
+</html>
