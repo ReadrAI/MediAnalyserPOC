@@ -13,7 +13,7 @@ from utils import sql_utils
 
 dashboard_app = Blueprint('dashboard', __name__, template_folder='templates')
 
-__dashboard_version__ = 'v0.0.1'
+__dashboard_version__ = 'v0.0.2'
 
 
 @dashboard_app.route("/dashboard")
@@ -57,10 +57,7 @@ def plot_search_occurence():
         label = asd[i][0] if asd[i][0] != '' else 'FAILURE: Pipeline error'
         axis.plot(distinct_dates, elems, label=label)
         max_y = max(max_y, max(elems))
-    tick_dates = pd.date_range(
-        str(distinct_dates[0]),
-        str(distinct_dates[-1] - pd.offsets.MonthBegin(1) + relativedelta(months=1)), freq='1M'
-    ) - pd.offsets.MonthBegin(1)
+    tick_dates = list(pd.date_range(distinct_dates[0], distinct_dates[-1], freq='7D').date) + [distinct_dates[-1]]
     axis.set_xticks(tick_dates)
     axis.set_xticklabels(tick_dates, rotation=75, ha='center')
     axis.set_yticks(range(0, max_y + 1, 5))
@@ -68,7 +65,7 @@ def plot_search_occurence():
     axis.legend()
     canvas = FigureCanvas(fig)
     output = io.BytesIO()
-    canvas.print_png(output, )
+    canvas.print_png(output)
     response = make_response(output.getvalue())
     response.mimetype = 'image/png'
     return response
@@ -76,8 +73,8 @@ def plot_search_occurence():
 
 @dashboard_app.route('/plot/rss-feed-availability')
 def plot_rss_feed_availability():
-    sourceRssShare = sql_utils.getSourceRssShare(host=sql_utils.getHost())
-    searchSourceRssShare = sql_utils.getSearchSourceRssShare(host=sql_utils.getHost())
+    sourceRssShare = 4, 25  # sql_utils.getSourceRssShare(host=sql_utils.getHost())
+    searchSourceRssShare = 5, 10  # sql_utils.getSearchSourceRssShare(host=sql_utils.getHost())
 
     r = [0, 1]
     raw_data = {
@@ -94,12 +91,21 @@ def plot_rss_feed_availability():
     fig = Figure(tight_layout=True)
     axis = fig.add_subplot(1, 1, 1)
     axis.set_title("RSS feed availability")
-    # axis.plot(xs, ys)
 
-    axis.bar(r, greenBars, color='#b5ffb9', edgecolor='white', width=barWidth, label="available")
-    axis.bar(r, orangeBars, bottom=greenBars, color='#f9bc86', edgecolor='white', width=barWidth, label="missing")
-    axis.set_xticks(r, names)
+    ax_green = axis.bar(r, greenBars, color='#b5ffb9', edgecolor='white', width=barWidth, label="available")
+    ax_orange = axis.bar(r, orangeBars, bottom=greenBars, color='#f9bc86', edgecolor='white', width=barWidth,
+                         label="missing")
+    axis.set_xticks(ticks=r)
+    axis.set_xticklabels(names)
     axis.legend(loc='upper left', bbox_to_anchor=(1, 1), ncol=1)
+
+    for r1, r2 in zip(ax_green, ax_orange):
+        h1 = r1.get_height()
+        h2 = r2.get_height()
+        axis.text(r1.get_x() + r1.get_width() / 2., h1 / 2., "%d" % h1, ha="center", va="center", color="white",
+                  fontsize=16, fontweight="bold")
+        axis.text(r2.get_x() + r2.get_width() / 2., h1 + h2 / 2., "%d" % h2, ha="center", va="center", color="white",
+                  fontsize=16, fontweight="bold")
 
     canvas = FigureCanvas(fig)
     output = io.BytesIO()
