@@ -73,8 +73,8 @@ def plot_search_occurence():
 
 @dashboard_app.route('/plot/rss-feed-availability')
 def plot_rss_feed_availability():
-    sourceRssShare = 4, 25  # sql_utils.getSourceRssShare(host=sql_utils.getHost())
-    searchSourceRssShare = 5, 10  # sql_utils.getSearchSourceRssShare(host=sql_utils.getHost())
+    sourceRssShare = sql_utils.getSourceRssShare(host=sql_utils.getHost())
+    searchSourceRssShare = sql_utils.getSearchSourceRssShare(host=sql_utils.getHost())
 
     r = [0, 1]
     raw_data = {
