@@ -24,7 +24,7 @@ def dashboard():
         'version': __dashboard_version__,
         'time': ''
     }
-    return render_template('index.html', **templateData)
+    return render_template('d_index.html', **templateData)
 
 
 # @dashboard.route('/dashboard', methods=['POST'])
@@ -41,7 +41,7 @@ def dashboard():
 #         'hum': hum,
 #         'numSamples': numSamples
 #     }
-#     return render_template('index.html', **templateData)
+#     return render_template('d_index.html', **templateData)
 
 
 @dashboard_app.route('/plot/article-search-occurence')
