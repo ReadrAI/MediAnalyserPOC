@@ -3,12 +3,14 @@ import pytz
 import datetime
 import os
 import logging
+from os import path, walk
 
 from flask import Flask
 from flask import send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 
 from flask_app.dashboard import dashboard
+from flask_app.data_input import data_input
 from utils.data_manager import DataManager
 from utils import mail_utils
 from utils import models
@@ -18,9 +20,11 @@ host = sql_utils.getHost()
 
 app = Flask(__name__)
 app.register_blueprint(dashboard.dashboard_app)
+app.register_blueprint(data_input.data_input_app)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = sql_utils.getDBURLFromHost(host)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['TEMPLATES_AUTO_RELOAD'] = True
 
 db = SQLAlchemy(app)
 db.init_app(app)
@@ -45,5 +49,18 @@ def favicon():
                                'favicon.ico', mimetype='image/vnd.microsoft.icon')
 
 
+def createExtraFileList(extra_dirs=['.']):
+    extra_files = extra_dirs[:]
+    for extra_dir in extra_dirs:
+        for dirname, dirs, files in walk(extra_dir):
+            if '__' not in dirname:
+                for filename in files:
+                    filename = path.join(dirname, filename)
+                    if path.isfile(filename):
+                        if '__' not in filename:
+                            extra_files.append(filename)
+    return extra_files
+
+
 if __name__ == "__main__":
-    app.run(host='0.0.0.0')
+    app.run(extra_files=createExtraFileList(), host='0.0.0.0')  # debug=True, port=5000
