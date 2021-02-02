@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+   <head>
+      <title>NewsHorizon Data Input</title>
+      <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+        <meta http-equiv="Pragma" content="no-cache" />
+        <meta http-equiv="Expires" content="0" />
+      <link rel="stylesheet" href='../static/style.css'/>
+   </head>
+   <body>
+      <h1>NewsHorizon Data Input</h1>
+      <form action="/data-input" method="POST">
+         <p> Enter new source:</p>
+         <p> Source Name </p>
+         <input name="sourceName" value= {{sourceName}}>
+         <p> Feed URL </p>
+         <input name="feedUrl" type="text" value={{feedUrl}}>
+         <p> Section </p>
+         <input name="section" type="text" value={{section}}>
+         <p></p>
+         <input type="submit">
+         </form></p>
+      <hr>
+      </body>
+</html>
