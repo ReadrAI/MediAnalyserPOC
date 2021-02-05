@@ -63,14 +63,18 @@ flask_env:
 	export NHHOST=LOCAL_JEAN
 	python3 newshorizonapp
 
+NH_DB_BACKUP_FILE_NAME := "./db_backups/db_backup_media_""`date "+%Y_%m_%d-%H_%M_%S"`"".backup"
+
 db_backup:
-	export NH_DB_BACKUP_DATE="`date "+%Y_%m_%d-%H_%M_%S"`"".backup"
-	export NH_DB_BACKUP_FILE_NAME="./db_backups/db_backup_media_${NH_DB_BACKUP_DATE}"
-	psql media > ${NH_DB_BACKUP_FILE_NAME}
-	gsutil cp ${NH_DB_BACKUP_FILE_NAME} gs://newshorizon_backup_db/
+	# echo $(NH_DB_BACKUP_FILE_NAME)
+	psql media > $(NH_DB_BACKUP_FILE_NAME)
+	gsutil cp $(NH_DB_BACKUP_FILE_NAME) gs://newshorizon_backup_db/
+
+NH_GCS_DB_RESTORE_FILE_NAME := $(shell gsutil ls -l gs://newshorizon_backup_db/ | sort -k 2 | grep -v TOTAL | cut -c34- )
+NH_DB_RESTORE_FILE_NAME := $(shell echo $(NH_GCS_DB_RESTORE_FILE_NAME) | cut -c28- )
 
 db_restore:
-	export NH_GCS_DB_BACKUP_FILE_NAME=$(gsutil ls -l gs://newshorizon_backup_db/ | sort -k 2 | grep -v TOTAL | awk '{print $3}')
-	export NH_DB_BACKUP_FILE_NAME=$(echo ${NH_GCS_DB_BACKUP_FILE_NAME} | cut -c28-)
-	gsutil cp ${NH_GCS_DB_BACKUP_FILE_NAME} "./db_backups/${NH_DB_BACKUP_FILE_NAME}"
-	psql media < "./db_backups/${NH_DB_BACKUP_FILE_NAME}"
+	# echo $(NH_GCS_DB_RESTORE_FILE_NAME)
+	# echo $(NH_DB_RESTORE_FILE_NAME)
+	gsutil cp ${NH_GCS_DB_RESTORE_FILE_NAME} "./db_backups/${NH_DB_RESTORE_FILE_NAME}"
+	psql media < "./db_backups/${NH_DB_RESTORE_FILE_NAME}"
