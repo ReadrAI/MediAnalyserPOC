@@ -233,7 +233,14 @@ def parseEmail(email_tag):
 
 
 def downloadArticle(article_search, host, schema=models.schema):
-    title = scrape_utils.scrapeArticleTitle(article_search.search_url)
+    page = scrape_utils.downloadPage(article_search.search_url)
+    if page.status_code != 200:
+        logging.error("Page could not be fetched (status code " + page.status + "): " + article_search.search_url)
+        return None
+    if page.url != article_search.search_url:
+        sql_utils.updateSearchUrl(article_search.search_url, page.url, host=host, schema=schema)
+
+    title = scrape_utils.scrapeArticleTitle(page)
     if title is None:
         return None
 
