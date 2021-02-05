@@ -17,6 +17,8 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 from urllib.parse import urlparse
 
+from sqlalchemy import sql
+
 from utils import sql_utils
 from utils import models
 from utils.data_manager import DataManager
@@ -51,24 +53,24 @@ def getFileName(topic, source_name, page=None):
         ('' if page is None else ('_%d' % page)) + '.csv'
 
 
-def scrapeArticleTitle(url):
+def downloadPage(url):
     headers = {
         'User-agent': ('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko)'
                        'Chrome/88.0.4324.96 Safari/537.36'),
         'referer': 'https://stackoverflow.com/'}
-    page = requests.get(url, headers=headers, allow_redirects=True)
-    if page.status_code == 200:
-        soup = BeautifulSoup(page.text, "html.parser")
-        all_h1 = map(lambda x: x.text.replace("\n", ''), soup.find_all('h1'))
-        title = list(filter(lambda x: x != '' and len(x.split(' ')) > 2, all_h1))
+    return requests.get(url, headers=headers, allow_redirects=True)
+
+
+def scrapeArticleTitle(page):
+    soup = BeautifulSoup(page.text, "html.parser")
+    all_h1 = map(lambda x: x.text.replace("\n", ''), soup.find_all('h1'))
+    title = list(filter(lambda x: x != '' and len(x.split(' ')) > 2, all_h1))
+    if len(title) == 0:
+        all_titles = map(lambda x: x.text.replace("\n", ''), soup.find_all('title'))
+        title = list(filter(lambda x: x != '' and len(x.split(' ')) > 2, all_titles))
         if len(title) == 0:
-            all_titles = map(lambda x: x.text.replace("\n", ''), soup.find_all('title'))
-            title = list(filter(lambda x: x != '' and len(x.split(' ')) > 2, all_titles))
-            if len(title) == 0:
-                return None
-        return title[0]
-    else:
-        return None
+            return None
+    return title[0]
 
 
 def importNYT(data, source_name, host, schema=models.schema):
@@ -150,8 +152,10 @@ def __pipelineNYT(source_name, file_name, url, loadDisk=False, fetchSource=False
         data = r.json()
         saveData(data, file_name)
         time.sleep(10)
-    if loadDisk:
+    elif loadDisk:
         data = loadData(file_name)
+    else:
+        return None
     return importNYT(data, source_name, host=host, schema=schema)
 
 
@@ -305,8 +309,10 @@ def __pipelineNewsAPI(source_name, file_name, url=None, loadDisk=False, fetchSou
         data = __fetchNewsAPI(content_type="articles", url=url)
         articles = pd.DataFrame(data)
         articles.to_csv(file_name)
-    if loadDisk:
+    elif loadDisk:
         articles = pd.read_csv(file_name)
+    else:
+        return None
     return importNewsAPIArticles(articles, source_name, host=host, schema=schema)
 
 
@@ -364,4 +370,32 @@ def loadRoutine(host, schema=models.schema):
             'people', 'fashion', 'politics', 'COVID', 'elections', 'sport', 'news', 'world', 'europe',
             'technology', 'science', 'art', 'business', 'tax', 'jobs', 'trends', 'design']:
         count += pipelineNewsAPITopic(topic=topic, fetchSource=True, host=host, schema=schema)
+    return count
+
+
+def scrapeRssFeed(query, function, host, schema=models.schema):
+    count = 0
+    if type(query) == str:
+        url = 'http://cloud.feedly.com/v3/search/feeds?n=100&q=' + query
+        page = requests.get(url)
+        if page.status_code != 200:
+            logging.error("page could not be fetched, code" + page.status_code + " for url " + url)
+        data = json.loads(page.text)
+        for feed_search_result in data['results']:
+            feed_url = feed_search_result['feedId'][5:]  # remove 'feed/'
+            if feed_url.startswith('http'):
+                # function(feed_url, feed_search_result)
+                count += sql_utils.importRSSFeed(feed_url, host=host, schema=schema)
+            else:
+                logging.error("Feed url not recognised: " + feed_search_result['feedId'])
+    else:
+        logging.error("query must be of type str, not " + type(query))
+    return count
+
+
+def importRssFeedFromCsv(file_path, host, schema=models.schema):
+    count = 0
+    rssFeeds = pd.read_csv(file_path)
+    for i, feed in rssFeeds.iterrows():
+        count += sql_utils.importRSSFeed(feed, host=host, schema=schema)
     return count

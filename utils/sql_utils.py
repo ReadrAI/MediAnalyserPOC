@@ -154,6 +154,11 @@ def getSourceFromUrl(url, host, schema=models.schema):
     return None
 
 
+def updateSearchUrl(article_search, url, host, schema=models.schema):
+    article_search.search_url = url
+    commitSession(host=host, schema=schema)
+
+
 def getSearch(gmail_request_uuid, host, schema=models.schema):
     return getDBSession(host=host, schema=schema).query(models.ArticleSearch)\
         .filter(models.ArticleSearch.gmail_request_uuid == gmail_request_uuid).first()
@@ -359,3 +364,14 @@ def getSearchSourceRssShare(host, schema=models.schema):
         models.Article.source_uuid
     ).all()
     return functools.reduce(lambda a, b: a + (b[1] > 0), srs, 0), len(srs)
+
+
+def importRSSFeed(feed_url, host, schema=models.schema):
+    source = getSource(tldextract.extract(feed_url).domain, host=host, schema=schema)
+    rssFeed = models.RSSFeed(
+        source_uuid=(source.source_uuid),
+        feed_url=feed_url
+    )
+    insertion = insertEntry(rssFeed)
+    if insertion:
+        return rssFeed
