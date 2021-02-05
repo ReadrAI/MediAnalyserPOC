@@ -56,7 +56,7 @@ nginx_settings:
 max_ml_copy:
 	scp -p jean@5.149.19.251:/home/jean/Code/MediAnalyserPOC/ml_models/*.pickle /Users/jean/Documents/Coding/MediAnalyserPOC/ml_models/
 
-make flask_env:
+flask_env:
 	export FLASK_DEBUG=1
 	export FLASK_ENV=development
 	export FLASK_APP=newshorizon.py
