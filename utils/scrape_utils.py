@@ -374,7 +374,7 @@ def loadRoutine(host, schema=models.schema):
     return count
 
 
-def scrapeRssFeed(query, function, host, schema=models.schema):
+def scrapeRssFeed(query, host, schema=models.schema):
     count = 0
     if type(query) == str:
         url = 'http://cloud.feedly.com/v3/search/feeds?n=100&q=' + query
@@ -385,7 +385,6 @@ def scrapeRssFeed(query, function, host, schema=models.schema):
         for feed_search_result in data['results']:
             feed_url = feed_search_result['feedId'][5:]  # remove 'feed/'
             if feed_url.startswith('http'):
-                # function(feed_url, feed_search_result)
                 count += sql_utils.importRSSFeed(feed_url, host=host, schema=schema)
             else:
                 logging.error("Feed url not recognised: " + feed_search_result['feedId'])
@@ -400,4 +399,13 @@ def importRssFeedFromCsv(file_path, host, schema=models.schema):
     for i, feed in rssFeeds.iterrows():
         feedDbEntry = sql_utils.importRSSFeed(feed[0], host=host, schema=schema)
         count += 1 if feedDbEntry is not None else 0
+    return count
+
+
+def importSourceFeeds():
+    count = 0
+    session = sql_utils.getDBSession(host=sql_utils.getHost)
+    sources = session.query(models.Source).all()
+    for s in sources:
+        count += scrapeRssFeed(s.source_name, None, host=sql_utils.getHost())
     return count
