@@ -136,7 +136,7 @@ Data Acquisition/chromedriver_v*
 metadata/*
 raw_data/*
 ml_models/*
-db_backup/*
+db_backups/*
 *.backup
 utils/scrape_drivers/*
 data_visualisation/credentials.json
