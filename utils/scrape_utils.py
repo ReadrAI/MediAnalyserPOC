@@ -380,7 +380,7 @@ def scrapeRssFeed(query, host, schema=models.schema):
         url = 'http://cloud.feedly.com/v3/search/feeds?n=100&q=' + query
         page = requests.get(url)
         if page.status_code != 200:
-            logging.error("page could not be fetched, code" + page.status_code + " for url " + url)
+            logging.error("page could not be fetched, code" + str(page.status_code) + " for url " + url)
         data = json.loads(page.text)
         for feed_search_result in data['results']:
             feed_url = feed_search_result['feedId'][5:]  # remove 'feed/'
