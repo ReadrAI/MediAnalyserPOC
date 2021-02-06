@@ -379,15 +379,16 @@ def scrapeRssFeed(query, host, schema=models.schema):
     if type(query) == str:
         url = 'http://cloud.feedly.com/v3/search/feeds?n=100&q=' + query
         page = requests.get(url)
-        if page.status_code != 200:
-            logging.error("page could not be fetched, code" + str(page.status_code) + " for url " + url)
-        data = json.loads(page.text)
-        for feed_search_result in data['results']:
-            feed_url = feed_search_result['feedId'][5:]  # remove 'feed/'
-            if feed_url.startswith('http'):
-                count += sql_utils.importRSSFeed(feed_url, host=host, schema=schema)
-            else:
-                logging.error("Feed url not recognised: " + feed_search_result['feedId'])
+        if page.status_code == 200:
+            data = json.loads(page.text)
+            for feed_search_result in data['results']:
+                feed_url = feed_search_result['feedId'][5:]  # remove 'feed/'
+                if feed_url.startswith('http'):
+                    count += sql_utils.importRSSFeed(feed_url, host=host, schema=schema)
+                else:
+                    logging.error("Feed url not recognised: " + feed_search_result['feedId'])
+        else:
+            logging.error("page could not be fetched, code " + str(page.status_code) + " for url " + url)
     else:
         logging.error("query must be of type str, not " + type(query))
     return count
