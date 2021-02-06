@@ -66,15 +66,12 @@ flask_env:
 NH_DB_BACKUP_FILE_NAME := "./db_backups/db_backup_media_""`date "+%Y_%m_%d-%H_%M_%S"`"".backup"
 
 db_backup:
-	# echo $(NH_DB_BACKUP_FILE_NAME)
-	psql media > $(NH_DB_BACKUP_FILE_NAME)
+	pg_dump media | gzip > $(NH_DB_BACKUP_FILE_NAME)
 	gsutil cp $(NH_DB_BACKUP_FILE_NAME) gs://newshorizon_backup_db/
 
-NH_GCS_DB_RESTORE_FILE_NAME := $(shell gsutil ls -l gs://newshorizon_backup_db/ | sort -k 2 | grep -v TOTAL | cut -c34- )
-NH_DB_RESTORE_FILE_NAME := $(shell echo $(NH_GCS_DB_RESTORE_FILE_NAME) | cut -c28- )
+NH_GCS_DB_RESTORE_FILE_NAME := $(shell gsutil ls -l gs://newshorizon_backup_db/ | grep -v TOTAL | sort -r -k 2 | sed -n '1 p' | awk '{print $$3}')
+NH_DB_RESTORE_FILE_NAME := $(notdir $(NH_GCS_DB_RESTORE_FILE_NAME))
 
 db_restore:
-	# echo $(NH_GCS_DB_RESTORE_FILE_NAME)
-	# echo $(NH_DB_RESTORE_FILE_NAME)
-	gsutil cp ${NH_GCS_DB_RESTORE_FILE_NAME} "./db_backups/${NH_DB_RESTORE_FILE_NAME}"
-	psql media < "./db_backups/${NH_DB_RESTORE_FILE_NAME}"
+	gsutil cp $(NH_GCS_DB_RESTORE_FILE_NAME) "./db_backups/$(NH_DB_RESTORE_FILE_NAME)"
+	gunzip -c "./db_backups/${NH_DB_RESTORE_FILE_NAME}" | psql media
