@@ -13,8 +13,8 @@ import psycopg2
 import sqlalchemy
 from sqlalchemy import func, Date
 from sqlalchemy.orm import sessionmaker
-from urllib.parse import urlparse
 
+from utils import scrape_utils
 from utils import models
 
 
@@ -175,14 +175,11 @@ def getSourceID(name, host, schema=models.schema):
 def getOrSetSourceID(name, url, host, schema=models.schema):
     source_uuid = getSourceID(name, host=host, schema=schema)
     if source_uuid is None:
-        url_stem = urlparse(url).netloc
-        if url_stem != '':
-            url_stem = url_stem("feeds.", "")
-            insertEntry(models.Source(
-                source_name=name,
-                website_url=url_stem,
-            ), host=host, schema=schema)
-            source_uuid = getSourceID(name, host=host, schema=schema)
+        url_stem = scrape_utils.getRootUrl(url)
+        if url_stem is not None:
+            source = models.Source(source_name=name, website_url=url_stem)
+            if insertEntry(source, host=host, schema=schema):
+                source_uuid = str(source.source_uuid)
         else:
             logging.error("Could not add source %s with url %s: stem is %s." % (name, url, url_stem))
     return source_uuid
@@ -367,11 +364,13 @@ def getSearchSourceRssShare(host, schema=models.schema):
 
 
 def importRSSFeed(feed_url, host, schema=models.schema):
-    source = getSource(tldextract.extract(feed_url).domain, host=host, schema=schema)
-    rssFeed = models.RSSFeed(
-        source_uuid=(source.source_uuid),
-        feed_url=feed_url
-    )
-    insertion = insertEntry(rssFeed)
-    if insertion:
-        return rssFeed
+    source_uuid = getOrSetSourceID(tldextract.extract(feed_url).domain, feed_url, host=host, schema=schema)
+    if source_uuid is not None:
+        rssFeed = models.RSSFeed(
+            source_uuid=source_uuid,
+            feed_url=feed_url
+        )
+        return insertEntry(rssFeed, host=host, schema=schema)
+    else:
+        logging.warning("Source not found for url " + feed_url)
+        return False
