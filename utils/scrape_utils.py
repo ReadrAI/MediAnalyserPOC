@@ -407,5 +407,5 @@ def importSourceFeeds():
     session = sql_utils.getDBSession(host=sql_utils.getHost)
     sources = session.query(models.Source).all()
     for s in sources:
-        count += scrapeRssFeed(s.source_name, None, host=sql_utils.getHost())
+        count += scrapeRssFeed(s.source_name, host=sql_utils.getHost())
     return count
