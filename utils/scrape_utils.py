@@ -17,7 +17,7 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 from urllib.parse import urlparse
 
-from sqlalchemy import sql
+import tldextract
 
 from utils import sql_utils
 from utils import models
@@ -41,9 +41,10 @@ def saveData(data, name):
 
 
 def getRootUrl(article_url):
-    # TODO replace urlparse with tldextract
-    parsed_uri = urlparse(article_url)
-    return '{uri.scheme}://{uri.netloc}/'.format(uri=parsed_uri)
+    tld = tldextract.extract(article_url)
+    if tld.ipv4 == '':
+        parsed_uri = urlparse(article_url)
+        return '{uri.scheme}://{tld.registered_domain}/'.format(uri=parsed_uri, tld=tld)
 
 
 def getFileName(topic, source_name, page=None):
@@ -304,7 +305,7 @@ def pipelineNewsAPIArticle(title, source_name=None, loadDisk=False, fetchSource=
 
 
 def __pipelineNewsAPI(source_name, file_name, url=None, loadDisk=False, fetchSource=False,
-                      host=sql_utils.getHost(), schema=models.schema):
+                      host=None, schema=models.schema):
     if fetchSource:
         data = __fetchNewsAPI(content_type="articles", url=url)
         articles = pd.DataFrame(data)
@@ -397,5 +398,6 @@ def importRssFeedFromCsv(file_path, host, schema=models.schema):
     count = 0
     rssFeeds = pd.read_csv(file_path)
     for i, feed in rssFeeds.iterrows():
-        count += sql_utils.importRSSFeed(feed, host=host, schema=schema)
+        feedDbEntry = sql_utils.importRSSFeed(feed[0], host=host, schema=schema)
+        count += 1 if feedDbEntry is not None else 0
     return count
