@@ -402,10 +402,10 @@ def importRssFeedFromCsv(file_path, host, schema=models.schema):
     return count
 
 
-def importSourceFeeds():
+def importSourceFeeds(host, schema=models.schema):
     count = 0
-    session = sql_utils.getDBSession(host=sql_utils.getHost)
+    session = sql_utils.getDBSession(host=host, schema=schema)
     sources = session.query(models.Source).all()
     for s in sources:
-        count += scrapeRssFeed(s.source_name, host=sql_utils.getHost())
+        count += scrapeRssFeed(s.source_name, host=host, schema=schema)
     return count
