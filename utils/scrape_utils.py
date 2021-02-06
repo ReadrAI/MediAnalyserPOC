@@ -387,6 +387,8 @@ def scrapeRssFeed(query, host, schema=models.schema):
                     count += sql_utils.importRSSFeed(feed_url, host=host, schema=schema)
                 else:
                     logging.error("Feed url not recognised: " + feed_search_result['feedId'])
+        elif page.status_code == 429:
+            raise Exception("429: Too many requests")
         else:
             logging.error("page could not be fetched, code " + str(page.status_code) + " for url " + url)
     else:
