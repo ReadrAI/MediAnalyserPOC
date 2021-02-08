@@ -11,7 +11,7 @@ import functools
 from os.path import expanduser
 import psycopg2
 import sqlalchemy
-from sqlalchemy import func, Date
+from sqlalchemy import cast, func, Date
 from sqlalchemy.orm import sessionmaker
 
 from utils import scrape_utils
@@ -106,16 +106,22 @@ def getDBSession(host, schema=models.schema):
     thread_id = threading.get_ident()
     if thread_id not in sessions:
         sessions[thread_id] = {}
-    if schema not in sessions[thread_id]:
+    if host.name not in sessions[thread_id]:
+        sessions[thread_id][host.name] = {}
+    if schema not in sessions[thread_id][host.name]:
         Session = sessionmaker(bind=getEngine(host=host, schema=schema))
-        sessions[thread_id][schema] = Session()
+        sessions[thread_id][host.name][schema] = Session()
     try:
-        sessions[thread_id][schema].commit()
-    except Exception as e:
-        sessions[thread_id][schema].rollback()
-        logging.error('Rolled back session (%s, %s)' % (host.host, schema))
+        sessions[thread_id][host.name][schema].commit()
+    except sqlalchemy.exc.InvalidRequestError as e:
+        sessions[thread_id][host.name][schema].close()
+        logging.error('Closed session (%s, %s, %d)' % (host.host, schema, thread_id))
         logging.error(e)
-    return sessions[thread_id][schema]
+    except Exception as e:
+        sessions[thread_id][host.name][schema].rollback()
+        logging.error('Rolled back session (%s, %s, %d)' % (host.host, schema, thread_id))
+        logging.error(e)
+    return sessions[thread_id][host.name][schema]
 
 
 def dropAllTables(host, schema=models.schema):
@@ -380,3 +386,13 @@ def importRSSFeed(feed_url, host, schema=models.schema):
     else:
         logging.warning("Source not found for url " + feed_url)
         return False
+
+
+def getMissingRssFeedSources(host, schema=models.schema):
+    return getDBSession(host=host, schema=schema).query(
+        models.Source.source_uuid, func.count(models.RSSFeed.feed_uuid)
+    ).join(
+        models.RSSFeed, models.Source.source_uuid == models.RSSFeed.source_uuid, isouter=True
+    ).group_by(
+        models.Source.source_uuid
+    ).all()

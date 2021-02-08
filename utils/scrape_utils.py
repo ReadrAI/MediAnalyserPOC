@@ -405,10 +405,10 @@ def importRssFeedFromCsv(file_path, host, schema=models.schema):
     return count
 
 
-def importSourceFeeds(host, schema=models.schema):
+def importSourceFeeds(limit, host, schema=models.schema):
     count = 0
-    session = sql_utils.getDBSession(host=host, schema=schema)
-    sources = session.query(models.Source).all()
-    for s in sources:
+    sources = sql_utils.getMissingRssFeedSources(host=host, schema=schema)
+    sources_to_fetch = [x for x in sources if x[1] <= limit]
+    for s in sources_to_fetch:
         count += scrapeRssFeed(s.source_name, host=host, schema=schema)
     return count
