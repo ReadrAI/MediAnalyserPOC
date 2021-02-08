@@ -388,11 +388,27 @@ def importRSSFeed(feed_url, host, schema=models.schema):
         return False
 
 
+def getSourceAddDates(host, schema=models.schema):
+    date = cast(models.Source.added_at, Date).label('date')
+    distinct_dates = getDBSession(host=host, schema=schema).query(
+        date, func.count(models.Source.source_uuid)).group_by(date).all()
+    distinct_dates.sort()
+    return distinct_dates
+
+
+def getArticleAddDates(host, schema=models.schema):
+    date = cast(models.Article.published_at, Date).label('date')
+    distinct_dates = getDBSession(host=host, schema=schema).query(
+        date, func.count(models.Article.article_uuid)).group_by(date).all()
+    distinct_dates.sort()
+    return distinct_dates
+
+
 def getMissingRssFeedSources(host, schema=models.schema):
     return getDBSession(host=host, schema=schema).query(
-        models.Source.source_uuid, func.count(models.RSSFeed.feed_uuid)
+        models.Source.source_name, func.count(models.RSSFeed.feed_uuid)
     ).join(
         models.RSSFeed, models.Source.source_uuid == models.RSSFeed.source_uuid, isouter=True
     ).group_by(
-        models.Source.source_uuid
+        models.Source.source_name
     ).all()
