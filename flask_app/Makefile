@@ -18,3 +18,10 @@ nginx_log:
 
 srv_edit:
 	sudo nano /etc/systemd/system/newshorizon.service
+
+flask_start:
+	export FLASK_DEBUG=1
+	export FLASK_ENV=development
+	export FLASK_APP=newshorizon.py
+	export NHHOST=LOCAL_JEAN
+	python3 newshorizon.py

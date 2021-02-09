@@ -56,13 +56,6 @@ nginx_settings:
 max_ml_copy:
 	scp -p jean@5.149.19.251:/home/jean/Code/MediAnalyserPOC/ml_models/*.pickle /Users/jean/Documents/Coding/MediAnalyserPOC/ml_models/
 
-flask_env:
-	export FLASK_DEBUG=1
-	export FLASK_ENV=development
-	export FLASK_APP=newshorizon.py
-	export NHHOST=LOCAL_JEAN
-	python3 newshorizonapp
-
 NH_DB_BACKUP_FILE_NAME = $(eval NH_DB_BACKUP_FILE_NAME := "./db_backups/db_backup_media_"$(shell date "+%Y_%m_%d-%H_%M_%S")".gz")$(NH_DB_BACKUP_FILE_NAME)
 
 db_backup:
@@ -77,4 +70,4 @@ db_restore:
 	gsutil cp "gs://newshorizon_backup_db/"$(NH_DB_RESTORE_FILE_NAME) "./db_backups/$(NH_DB_RESTORE_FILE_NAME)"
 	dropdb media
 	psql -d postgres -c "create database media"
-	gunzip -c "./db_backups/${NH_DB_RESTORE_FILE_NAME}" | psql media
+	gunzip -c "./db_backups/${NH_DB_RESTORE_FILE_NAME}" | psql -d media

@@ -3,17 +3,21 @@ import functools
 import numpy as np
 import pandas as pd
 from datetime import datetime
-from dateutil.relativedelta import relativedelta
-from flask import render_template, make_response, request, Blueprint
+from flask import render_template, make_response, Blueprint
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 
+from utils import models
 from utils import sql_utils
 
 
 dashboard_app = Blueprint('dashboard', __name__, template_folder='templates')
 
 __dashboard_version__ = 'v0.0.2'
+
+# TODO import variables from main file newshorizon.py
+host = sql_utils.getHost()
+schema = models.schema
 
 
 @dashboard_app.route("/dashboard")
@@ -27,28 +31,46 @@ def dashboard():
     return render_template('d_index.html', **templateData)
 
 
-# @dashboard.route('/dashboard', methods=['POST'])
-# def dashboard_post():
-#     global numSamples
-#     numSamples = int(request.form['numSamples'])
-#     numMaxSamples = maxRowsTable()
-#     if (numSamples > numMaxSamples):
-#         numSamples = (numMaxSamples-1)
-#     time, temp, hum = getLastData()
-#     templateData = {
-#         'time': time,
-#         'temp': temp,
-#         'hum': hum,
-#         'numSamples': numSamples
-#     }
-#     return render_template('d_index.html', **templateData)
+@dashboard_app.route('/plot/article-source-number')
+def plot_article_source_number():
+    fig = Figure(tight_layout=True)
+    left_axis = fig.add_subplot(1, 1, 1)
+
+    sad = sql_utils.getSourceAddDates(host=host, schema=schema)
+    aad = sql_utils.getArticleAddDates(host=host, schema=schema)
+
+    sad_dates, sad_count = list(zip(*sad))
+    aad_dates, aad_count = list(zip(*aad))
+    sad_cum = np.cumsum(sad_count)
+    aad_cum = np.cumsum(aad_count)
+
+    left_color = 'tab:red'
+    left_axis.set_ylabel(ylabel='Number of Sources', color=left_color)
+    left_axis.plot(sad_dates, sad_cum, color=left_color)
+    left_axis.tick_params(axis='y', labelcolor=left_color)
+    left_axis.tick_params(axis='x', labelrotation=75)
+
+    right_axis = left_axis.twinx()
+
+    right_color = 'tab:blue'
+    right_axis.set_ylabel(ylabel='Number of Articles', color=right_color)  # we already handled the x-label with ax1
+    right_axis.plot(aad_dates, aad_cum, color=right_color)
+    right_axis.tick_params(axis='y', labelcolor=right_color)
+
+    right_axis.set_title('Number of searches and articles')
+    canvas = FigureCanvas(fig)
+    output = io.BytesIO()
+    canvas.print_png(output)
+    response = make_response(output.getvalue())
+    response.mimetype = 'image/png'
+    return response
 
 
 @dashboard_app.route('/plot/article-search-occurence')
 def plot_search_occurence():
     fig = Figure(tight_layout=True)
     axis = fig.add_subplot(1, 1, 1)
-    asd = sql_utils.getArticleSearchDates(sql_utils.getHost())
+    asd = sql_utils.getArticleSearchDates(host=host, schema=schema)
     distinct_dates = list(set(functools.reduce(lambda a, b: a + b[1], asd, [])))
     distinct_dates.sort()
     max_y = 0
@@ -73,8 +95,8 @@ def plot_search_occurence():
 
 @dashboard_app.route('/plot/rss-feed-availability')
 def plot_rss_feed_availability():
-    sourceRssShare = sql_utils.getSourceRssShare(host=sql_utils.getHost())
-    searchSourceRssShare = sql_utils.getSearchSourceRssShare(host=sql_utils.getHost())
+    sourceRssShare = sql_utils.getSourceRssShare(host=host, schema=schema)
+    searchSourceRssShare = sql_utils.getSearchSourceRssShare(host=host, schema=schema)
 
     r = [0, 1]
     raw_data = {
