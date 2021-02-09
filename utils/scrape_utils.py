@@ -99,8 +99,8 @@ def importNYT(data, source_name, host, schema=models.schema):
                 count += sql_utils.insertEntry(model_article, host=host, schema=schema)
             except (sqlalchemy.exc.DataError, psycopg2.errors.DatetimeFieldOverflow):
                 sql_utils.rollbackSession(host=host, schema=schema)
-                model_article.published_at = datetime.now()
-                model_article.updated_at = datetime.now()
+                model_article.published_at = None
+                model_article.updated_at = None
                 count += sql_utils.insertEntry(model_article, host=host, schema=schema)
 
     else:
@@ -336,7 +336,7 @@ def __feedImporter(feed_data, feed, host, schema=models.schema):
                 description=(a['summary'] if 'summary' in a else ''),
                 published_at=(
                     a['published'] if ('published' in a and a['published'] != '' and a['published'] is not None)
-                    else datetime.utcnow()),
+                    else None),
                 authors=([a['author']] if 'author' in a else [''])
             ), host=host, schema=schema)
         except KeyError:

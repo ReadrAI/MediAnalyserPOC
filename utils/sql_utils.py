@@ -269,7 +269,7 @@ def getRawArticlesQuery(n_days, host, schema=models.schema):
     if n_days is not None:
         current_time = datetime.datetime.utcnow()
         start = current_time - datetime.timedelta(days=n_days)
-        query = query.filter(models.Article.published_at >= start)
+        query = query.filter(models.Article.added_at >= start)
     return query
 
 
@@ -397,7 +397,7 @@ def getSourceAddDates(host, schema=models.schema):
 
 
 def getArticleAddDates(host, schema=models.schema):
-    date = cast(models.Article.published_at, Date).label('date')
+    date = cast(models.Article.added_at, Date).label('date')
     distinct_dates = getDBSession(host=host, schema=schema).query(
         date, func.count(models.Article.article_uuid)).group_by(date).all()
     distinct_dates.sort()

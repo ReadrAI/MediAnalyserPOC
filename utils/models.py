@@ -47,8 +47,9 @@ class Article(Base):
     title = Column(Text, nullable=False)
     description = Column(Text)
     authors = Column(ARRAY(String))
-    published_at = Column(DateTime, nullable=False, default=datetime.datetime.utcnow)
+    published_at = Column(DateTime)
     updated_at = Column(DateTime)
+    added_at = Column(DateTime, nullable=False, default=datetime.datetime.utcnow)
 
     source = relationship("Source", foreign_keys=[source_uuid])
     provider = relationship("Source", foreign_keys=[provider_uuid])
