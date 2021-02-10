@@ -19,7 +19,13 @@ EXTIP=5.149.19.251
 NHHOST=LOCAL_JEAN
 REPOPATH=/home/jean/Code/MediAnalyserPOC
 PYTHONPATH=PYTHONPATH:$REPOPATH
+# defautl PATH=/usr/bin/:/bin
+# add python and gsutil
+# FOR OS X:
+# PATH=/usr/bin/:/bin:/usr/local/anaconda3/bin/python3:/Users/jean/Documents/Coding/MediAnalyserPOC/google-cloud-sdk/bin/
 GOOGLE_APPLICATION_CREDENTIALS=$REPOPATH/credentials/future-oasis-286707-c52c864bbc9e.json
+
+30 0 * * * (cd $REPOPATH; make db_backup) >> $REPOPATH/main/logs/db_backup.txt 2>&1
 
 0 * * * * python3 $REPOPATH/main/article_fetching.py >> $REPOPATH/main/logs/article_fetching_log.txt 2>&1
 
