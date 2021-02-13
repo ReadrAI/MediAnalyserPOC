@@ -15,7 +15,6 @@
 # 
 # m h  dom mon dow   command
 
-EXTIP=5.149.19.251
 NHHOST=LOCAL_JEAN
 REPOPATH=/home/jean/Code/MediAnalyserPOC
 PYTHONPATH=PYTHONPATH:$REPOPATH

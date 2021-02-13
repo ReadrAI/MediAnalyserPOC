@@ -14,10 +14,10 @@ print("==================================")
 print("DNS Update Routine Started")
 print("Timestamp:", mail_utils.getCurrentTimestamp())
 
-past_ip = os.getenv('EXTIP', '')
-ip = dns_utils.getIP()
+past_ip = dns_utils.getLastIP()
+ip = dns_utils.fetchIP()
 if past_ip != ip:
-    os.environ['EXTIP'] = ip
+    dns_utils.updateIPFile(ip)
     print("External IP: " + ip)
     r = dns_utils.updateRecord(ip)
     errCount = ElementTree.fromstring(r.content).find("ErrCount").text
