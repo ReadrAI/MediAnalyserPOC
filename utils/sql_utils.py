@@ -11,7 +11,7 @@ import functools
 from os.path import expanduser
 import psycopg2
 import sqlalchemy
-from sqlalchemy import cast, func, Date
+from sqlalchemy import cast, func, Date, inspect
 from sqlalchemy.orm import sessionmaker
 
 from utils import scrape_utils
@@ -279,8 +279,13 @@ def insertEntry(entry, host, schema=models.schema):
         session.add(entry)
         session.commit()
         return True
-    except (psycopg2.errors.UniqueViolation, sqlalchemy.exc.IntegrityError):
+    except psycopg2.errors.UniqueViolation:
         logging.warning("Entry already exists for " + str(entry))
+        session.rollback()
+        return False
+    except sqlalchemy.exc.IntegrityError:
+        logging.error("Integrity error for " + str(entry))
+        logging.error(inspect(entry).dict)
         session.rollback()
         return False
 
