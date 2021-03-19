@@ -53,6 +53,9 @@ std_vars:
 nginx_settings:
 	cat main/nginx_setting.txt > /etc/nginx/sites-available/newshorizon
 
+jupyter_settings:
+	cat main/jupyter_setting.txt > /etc/systemd/system/jupyter.service
+
 max_ml_copy:
 	scp -p jean@5.149.19.251:/home/jean/Code/MediAnalyserPOC/ml_models/*.pickle /Users/jean/Documents/Coding/MediAnalyserPOC/ml_models/
 
@@ -71,3 +74,5 @@ db_restore:
 	dropdb media
 	psql -d postgres -c "create database media"
 	gunzip -c "./db_backups/${NH_DB_RESTORE_FILE_NAME}" | psql -d media
+
+# sudo nano /etc/systemd/system/jupyter.service
