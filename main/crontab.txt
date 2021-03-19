@@ -28,6 +28,8 @@ GOOGLE_APPLICATION_CREDENTIALS=$REPOPATH/credentials/future-oasis-286707-c52c864
 
 0 * * * * python3 $REPOPATH/main/article_fetching.py >> $REPOPATH/main/logs/article_fetching_log.txt 2>&1
 
+23 * * * * python3 $REPOPATH/main/feed_source_fetching.py >> $REPOPATH/main/logs/feed_source_fetching_log.txt 2>&1
+
 0 1 * * * python3 $REPOPATH/main/email_push_notification.py >> $REPOPATH/main/logs/email_push_notifications_log.txt 2>&1
 
 0 1 * * * python3 $REPOPATH/main/ml_model_creation.py >> $REPOPATH/main/logs/ml_model_creation_log.txt 2>&1
