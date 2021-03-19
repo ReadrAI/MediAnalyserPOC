@@ -283,9 +283,10 @@ def insertEntry(entry, host, schema=models.schema):
         logging.warning("Entry already exists for " + str(entry))
         session.rollback()
         return False
-    except sqlalchemy.exc.IntegrityError:
+    except sqlalchemy.exc.IntegrityError as e:
         logging.error("Integrity error for " + str(entry))
         logging.error(inspect(entry).dict)
+        logging.error(e)
         session.rollback()
         return False
 
