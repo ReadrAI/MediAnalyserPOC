@@ -45,9 +45,9 @@ def cleanText(text, to_remove=['PUNCT', 'PRON', 'SYM', 'NUM', 'ADP']):
     return ' '.join([y.lemma_ for y in nlp(text.lower()) if not y.is_stop and y.pos_ not in to_remove])
 
 
-def createArticleDictionnary(attributes=list(w2v_attributes.keys()), host=sql_utils.getHost(),
+def createArticleDictionnary(n_days=30, attributes=list(w2v_attributes.keys()), host=sql_utils.getHost(),
                              schema=models.schema):
-    query = sql_utils.getRawArticlesQuery(n_days=30, host=host, schema=schema)
+    query = sql_utils.getRawArticlesQuery(n_days=n_days, host=host, schema=schema)
     df = pd.read_sql(query.statement, query.session.bind)
     news_dict = {}
     progress = 0
@@ -125,8 +125,8 @@ def createKNNModel(attributes=list(w2v_attributes.keys()), neighbors=5):
     DataManager.setTmpModel(Models.KNN, neighbours)
 
 
-def createNlpModels(attributes=list(w2v_attributes.keys()), host=sql_utils.getHost(), schema=models.schema):
-    article_count = createArticleDictionnary(host=host, schema=schema)
+def createNlpModels(n_days=30, attributes=list(w2v_attributes.keys()), host=sql_utils.getHost(), schema=models.schema):
+    article_count = createArticleDictionnary(n_days=n_days, host=host, schema=schema)
     model_dim = createWord2VectorModel(attributes=attributes)
     createNewsVectors(attributes=attributes)
     createKNNModel(attributes=attributes)
