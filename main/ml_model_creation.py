@@ -22,7 +22,7 @@ print("Host:", host.name)
 print("Schema:", schema)
 
 try:
-    article_count, model_dim = data_science_utils.createNlpModels(host=host, schema=schema)
+    article_count, model_dim = data_science_utils.createNlpModels(attributes=['title'], host=host, schema=schema)
     print("Created model for %d articles and %d dimensions" % (article_count, model_dim))
 except BaseException as e:
     mail_utils.sendEmailNotification('ML Model Creation Exception', e)
