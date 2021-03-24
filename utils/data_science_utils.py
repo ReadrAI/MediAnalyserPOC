@@ -168,7 +168,7 @@ def getSimilarArticlesFromText(search_text, attribute='title', nb_articles=10, h
     neighbours = DataManager.getModel(Models.KNN)
     embedding = getTextEmbedding(search_text, attribute)
 
-    neighbour_articles = neighbours[attribute].kneighbors(embedding.reshape(1, w2v_size), n_neighbors=nb_articles)
+    neighbour_articles = neighbours[attribute].kneighbors(embedding.reshape(1, w2v_size), n_neighbors=3*nb_articles)
     similar_articles = {}
     for i, j in enumerate(neighbour_articles[1][0]):
         similar_articles[news_index[j]] = {}
@@ -180,4 +180,5 @@ def getSimilarArticlesFromText(search_text, attribute='title', nb_articles=10, h
     similar_articles_df = pd.DataFrame(similar_articles).T
     similar_articles_df.index.rename('article_uuid', inplace=True)
     similar_article_details = similar_article_details.set_index('article_uuid').join(similar_articles_df)
+    similar_article_details.drop_duplicates(subset='title', inplace=True)
     return similar_article_details.sort_values('distance').head(nb_articles)
