@@ -409,6 +409,9 @@ def importSourceFeeds(limit, host, schema=models.schema):
     count = 0
     sources = sql_utils.getMissingRssFeedSources(host=host, schema=schema)
     sources_to_fetch = [x for x in sources if x[1] <= limit]
-    for s in sources_to_fetch:
-        count += scrapeRssFeed(s[0], host=host, schema=schema)
+    try:
+        for s in sources_to_fetch:
+            count += scrapeRssFeed(s[0], host=host, schema=schema)
+    except Exception as e:
+        logging.warning(e)
     return count
