@@ -2,21 +2,16 @@
 Data visualisation
 """
 
-import gensim
-import spacy
 import logging
 
 import numpy as np
 import pandas as pd
 
-from sklearn.neighbors import NearestNeighbors
-from sklearn.feature_extraction.text import TfidfVectorizer
-
 from utils import models
 from utils import sql_utils
 from utils.data_manager import DataManager
 
-from utils import sql_utils, models, data_science_utils, data_visualisation
+from utils import sql_utils, models, data_science_utils
 from utils.data_manager import DataManager
 from utils.data_science_utils import Models
 
