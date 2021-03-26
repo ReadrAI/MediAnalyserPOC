@@ -2,16 +2,10 @@
 Data visualisation
 """
 
-import logging
+import os
 
 import numpy as np
-import pandas as pd
 
-from utils import models
-from utils import sql_utils
-from utils.data_manager import DataManager
-
-from utils import sql_utils, models, data_science_utils
 from utils.data_manager import DataManager
 from utils.data_science_utils import Models
 
@@ -20,7 +14,14 @@ import matplotlib as mpl
 from mpl_toolkits.axisartist.axislines import SubplotZero
 
 
-def plotResults(results, axes):
+def plotResults(results, axes=None, search_uuid=None):
+    if axes is None:
+        axes = __getDefaultAxes()
+
+    for i in range(len(axes)):
+        if __getColumnName__(axes[i]) not in results:
+            results = addAxis(results, axes[i])
+
     if results.index.dtype != 'int64':
         results.reset_index(drop=False, inplace=True)
 
@@ -63,7 +64,10 @@ def plotResults(results, axes):
                 xycoords='axes fraction', textcoords='offset points')
 
     plt.tight_layout()
-    plt.show()
+    if search_uuid is not None:
+        plt.savefig(__getFilename(search_uuid=search_uuid))
+    else:
+        plt.show()
 
 
 def addAxis(results, elems):
@@ -84,3 +88,20 @@ def addAxis(results, elems):
 
 def __getColumnName__(elems):
     return 'projection_factor_' + '_'.join(elems)
+
+
+def __getFilename(search_uuid):
+    return DataManager.getModulePath() + os.sep + 'output_img' + os.sep + search_uuid + '.png'
+
+
+def getMapImage(results, search_uuid):
+    axes = __getDefaultAxes()
+    plotResults(results, axes, search_uuid)
+    return open(__getFilename(search_uuid), 'rb').read()
+
+
+def __getDefaultAxes():
+    return [
+        ['left', 'right'],
+        ['socialist', 'conservative']
+    ]

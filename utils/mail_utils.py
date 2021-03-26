@@ -15,6 +15,7 @@ import threading
 import tldextract
 from bs4 import BeautifulSoup
 from email.mime.text import MIMEText
+from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -25,6 +26,7 @@ from utils import data_science_utils
 from utils import scrape_utils
 from utils import models
 from utils import translate_utils
+from utils import data_visualisation
 from utils.data_manager import DataManager
 
 
@@ -80,7 +82,7 @@ def __createGmailService():
     return service
 
 
-def create_message(sender, to, subject, plain_text, html_text=None, thread_id=None, in_reply_to=None):
+def create_message(sender, to, subject, plain_text, html_text=None, map_img=None, thread_id=None, in_reply_to=None):
 
     message = MIMEMultipart('alternative')
     message["subject"] = subject
@@ -96,6 +98,9 @@ def create_message(sender, to, subject, plain_text, html_text=None, thread_id=No
     message.add_header("In-Reply-To", in_reply_to)
     message.add_header("References", in_reply_to)
 
+    if map_img is not None:
+        message.attach(map_img)
+
     output = {'raw': base64.urlsafe_b64encode(bytes(message.as_string(), "utf-8")).decode("utf-8")}
 
     if thread_id is not None:
@@ -104,7 +109,7 @@ def create_message(sender, to, subject, plain_text, html_text=None, thread_id=No
     return output
 
 
-def answerEmail(request_email, to, plain_text, html_text=None, host=None, schema=models.schema):
+def answerEmail(request_email, to, plain_text, html_text=None, map_img=None, host=None, schema=models.schema):
     service = getGmailService()
     message = create_message(
         sender=SENDER_EMAIL,
@@ -112,6 +117,7 @@ def answerEmail(request_email, to, plain_text, html_text=None, host=None, schema
         subject="RE: " + request_email['subject'],
         plain_text=plain_text,
         html_text=html_text,
+        map_img=map_img,
         thread_id=request_email['threadId'],
         in_reply_to=request_email['message-id'])
     return send_message(service, 'me', message)
@@ -409,11 +415,25 @@ def getSearchResults(article_search, search_attribute, host, schema=models.schem
     return search_results.head(article_search.n_results)
 
 
-def sendResults(article_search, search_results, request, host, schema=models.schema):
+def getEmailContent(search_results):
     html_text = search_results[['source_name', 'title_url']].to_html(escape=False, header=False, index=False)
     plain_text = search_results[['source_name', 'title']].to_string(header=False, index=False)
+    img = data_visualisation.getMapImage(search_results)
+    if img is not None:
+        html_text += """\n
+            <p>
+                <img src="cid:new_map">
+            </p>"""
+        msgImg = MIMEImage(img, 'png')
+        msgImg.add_header('Content-ID', '<image1>')
+        msgImg.add_header('Content-Disposition', 'inline', filename='news_map')
+    return plain_text, html_text, img
+
+
+def sendResults(article_search, search_results, request, host, schema=models.schema):
+    plain_text, html_text, map_img = getEmailContent(search_results=search_results)
     sent_message = answerEmail(request_email=request, to=article_search.customer.customer_email,
-                               plain_text=plain_text, html_text=html_text, host=host, schema=schema)
+                               plain_text=plain_text, html_text=html_text, map_img=map_img, host=host, schema=schema)
     if sent_message is None:
         sql_utils.updateSearchStatus(article_search, 'FAILURE: Message not sent', host=host, schema=schema)
         return False
