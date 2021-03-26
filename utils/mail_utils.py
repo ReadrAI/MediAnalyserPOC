@@ -422,12 +422,12 @@ def getEmailContent(article_search, search_results):
     msgImg = None
     if img is not None:
         html_text = """\
-            <p>This is an inline image<br/>
+            <p>
                 <img src="cid:image1">
             </p>
         """ + html_text
         msgImg = MIMEImage(img, 'png')
-        msgImg.add_header('Content-ID', '<newsmap>')
+        msgImg.add_header('Content-ID', '<image1>')
         msgImg.add_header('Content-Disposition', 'attachement', filename=filename)
     return plain_text, html_text, msgImg
 
