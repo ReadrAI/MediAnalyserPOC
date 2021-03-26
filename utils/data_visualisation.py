@@ -97,7 +97,11 @@ def __getFilename(search_uuid):
 def getMapImage(results, search_uuid):
     axes = __getDefaultAxes()
     plotResults(results, axes, search_uuid)
-    return open(__getFilename(search_uuid), 'rb').read()
+    filename = __getFilename(search_uuid)
+    fp = open(filename, 'rb')
+    img = fp.read()
+    fp.close()
+    return img, filename
 
 
 def __getDefaultAxes():

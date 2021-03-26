@@ -418,16 +418,16 @@ def getSearchResults(article_search, search_attribute, host, schema=models.schem
 def getEmailContent(article_search, search_results):
     html_text = search_results[['source_name', 'title_url']].to_html(escape=False, header=False, index=False)
     plain_text = search_results[['source_name', 'title']].to_string(header=False, index=False)
-    img = data_visualisation.getMapImage(search_results, str(article_search.article_search_uuid))
+    img, filename = data_visualisation.getMapImage(search_results, str(article_search.article_search_uuid))
     msgImg = None
     if img is not None:
         html_text = """
-            <p>
-                <img src="cid:news_map">
+            <p><br/>
+                <img src="cid:newsmap">
             </p>\n""" + html_text
         msgImg = MIMEImage(img, 'png')
-        msgImg.add_header('Content-ID', '<news_map>')
-        msgImg.add_header('Content-Disposition', 'inline', filename='news_map')
+        msgImg.add_header('Content-ID', '<newsmap>')
+        msgImg.add_header('Content-Disposition', 'inline', filename=filename)
     return plain_text, html_text, msgImg
 
 
