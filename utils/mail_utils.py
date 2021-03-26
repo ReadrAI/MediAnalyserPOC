@@ -84,16 +84,16 @@ def __createGmailService():
 
 def create_message(sender, to, subject, plain_text, html_text=None, map_img=None, thread_id=None, in_reply_to=None):
 
-    message = MIMEMultipart('alternative')
+    message = MIMEMultipart('related')
     message["subject"] = subject
     message["from"] = sender
     message["to"] = to
 
-    part1 = MIMEText(plain_text, "plain")
-    message.attach(part1)
-    if html_text is not None:
-        part2 = MIMEText(html_text, "html")
-        message.attach(part2)
+    # part1 = MIMEText(plain_text, "plain")
+    # message.attach(part1)
+    # if html_text is not None:
+    part2 = MIMEText(html_text, "html")
+    message.attach(part2)
 
     message.add_header("In-Reply-To", in_reply_to)
     message.add_header("References", in_reply_to)
@@ -421,10 +421,11 @@ def getEmailContent(article_search, search_results):
     img, filename = data_visualisation.getMapImage(search_results, str(article_search.article_search_uuid))
     msgImg = None
     if img is not None:
-        html_text = """
-            <p><br/>
-                <img src="cid:newsmap">
-            </p>\n""" + html_text
+        html_text = """\
+            <p>This is an inline image<br/>
+                <img src="cid:image1">
+            </p>
+        """ + html_text
         msgImg = MIMEImage(img, 'png')
         msgImg.add_header('Content-ID', '<newsmap>')
         msgImg.add_header('Content-Disposition', 'attachement', filename=filename)
