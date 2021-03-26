@@ -101,7 +101,7 @@ def create_message(sender, to, subject, plain_text, html_text=None, map_img=None
     if map_img is not None:
         message.attach(map_img)
 
-    output = {'raw': base64.urlsafe_b64encode(bytes(message.as_string(), "utf-8")).decode("utf-8")}
+    output = {'raw': base64.urlsafe_b64encode(message.as_string().encode("utf-8")).decode("utf-8")}
 
     if thread_id is not None:
         output['threadId'] = thread_id
