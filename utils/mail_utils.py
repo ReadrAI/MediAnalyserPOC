@@ -415,10 +415,10 @@ def getSearchResults(article_search, search_attribute, host, schema=models.schem
     return search_results.head(article_search.n_results)
 
 
-def getEmailContent(search_results):
+def getEmailContent(article_search, search_results):
     html_text = search_results[['source_name', 'title_url']].to_html(escape=False, header=False, index=False)
     plain_text = search_results[['source_name', 'title']].to_string(header=False, index=False)
-    img = data_visualisation.getMapImage(search_results)
+    img = data_visualisation.getMapImage(search_results, article_search.search_uuid)
     if img is not None:
         html_text += """\n
             <p>
@@ -431,7 +431,7 @@ def getEmailContent(search_results):
 
 
 def sendResults(article_search, search_results, request, host, schema=models.schema):
-    plain_text, html_text, map_img = getEmailContent(search_results=search_results)
+    plain_text, html_text, map_img = getEmailContent(article_search, search_results)
     sent_message = answerEmail(request_email=request, to=article_search.customer.customer_email,
                                plain_text=plain_text, html_text=html_text, map_img=map_img, host=host, schema=schema)
     if sent_message is None:
