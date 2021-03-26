@@ -427,7 +427,7 @@ def getEmailContent(article_search, search_results):
             </p>\n""" + html_text
         msgImg = MIMEImage(img, 'png')
         msgImg.add_header('Content-ID', '<newsmap>')
-        msgImg.add_header('Content-Disposition', 'inline', filename=filename)
+        msgImg.add_header('Content-Disposition', 'attachement', filename=filename)
     return plain_text, html_text, msgImg
 
 
