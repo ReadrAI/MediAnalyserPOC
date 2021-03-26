@@ -348,7 +348,7 @@ def getCustomer(request, host, schema=models.schema):
 
 def addArticleSearch(customer_uuid, request, host, schema=models.schema):
     article_search = models.ArticleSearch(gmail_request_uuid=request['id'], customer_uuid=str(customer_uuid),
-                                          status='Processing')
+                                          status='Processing', n_results=20)
     success = sql_utils.insertEntry(article_search, host=host, schema=schema)
     if not success:
         logging.error("Could not insert search for entry %s" % request['id'])
@@ -421,10 +421,10 @@ def getEmailContent(article_search, search_results):
     img = data_visualisation.getMapImage(search_results, str(article_search.article_search_uuid))
     msgImg = None
     if img is not None:
-        html_text += """\n
+        html_text = """
             <p>
-                <img src="cid:new_map">
-            </p>"""
+                <img src="cid:news_map">
+            </p>\n""" + html_text
         msgImg = MIMEImage(img, 'png')
         msgImg.add_header('Content-ID', '<image1>')
         msgImg.add_header('Content-Disposition', 'inline', filename='news_map')
