@@ -21,17 +21,17 @@ PYTHONPATH=PYTHONPATH:$REPOPATH
 # defautl PATH=/usr/bin/:/bin
 # add python and gsutil
 # FOR OS X:
-# PATH=/usr/bin/:/bin:/usr/local/anaconda3/bin/python3:/Users/jean/Documents/Coding/MediAnalyserPOC/google-cloud-sdk/bin/
+# PATH=/usr/bin/:/bin:/usr/local/anaconda3/bin/python3:/Users/jean/Documents/Coding/MediAnalyserPOC/google-cloud-sdk/bin/:$PYTHONPATH
 GOOGLE_APPLICATION_CREDENTIALS=$REPOPATH/credentials/future-oasis-286707-c52c864bbc9e.json
 
 30 0 * * * (cd $REPOPATH; make db_backup) >> $REPOPATH/main/logs/db_backup.txt 2>&1
 
-0 * * * * python3 $REPOPATH/main/article_fetching.py >> $REPOPATH/main/logs/article_fetching_log.txt 2>&1
+0 * * * * python3 cd $REPOPATH && $REPOPATH/main/article_fetching.py >> $REPOPATH/main/logs/article_fetching_log.txt 2>&1
 
-23 * * * * python3 $REPOPATH/main/feed_source_fetching.py >> $REPOPATH/main/logs/feed_source_fetching_log.txt 2>&1
+23 * * * * python3 cd $REPOPATH && $REPOPATH/main/feed_source_fetching.py >> $REPOPATH/main/logs/feed_source_fetching_log.txt 2>&1
 
-0 1 * * * python3 $REPOPATH/main/email_push_notification.py >> $REPOPATH/main/logs/email_push_notifications_log.txt 2>&1
+0 1 * * * python3 cd $REPOPATH && $REPOPATH/main/email_push_notification.py >> $REPOPATH/main/logs/email_push_notifications_log.txt 2>&1
 
-0 1 * * * python3 $REPOPATH/main/ml_model_creation.py >> $REPOPATH/main/logs/ml_model_creation_log.txt 2>&1
+0 1 * * * python3 cd $REPOPATH && $REPOPATH/main/ml_model_creation.py >> $REPOPATH/main/logs/ml_model_creation_log.txt 2>&1
 
-*/15 * * * * python3 $REPOPATH/main/dns_update.py >> $REPOPATH/main/logs/dns_update_log.txt 2>&1
+*/15 * * * * python3 cd $REPOPATH && $REPOPATH/main/dns_update.py >> $REPOPATH/main/logs/dns_update_log.txt 2>&1
