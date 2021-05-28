@@ -92,7 +92,7 @@ def create_message(sender, to, subject, plain_text, html_text=None, map_img=None
     # part1 = MIMEText(plain_text, "plain")
     # message.attach(part1)
     # if html_text is not None:
-    part2 = MIMEText(html_text, "html")
+    part2 = MIMEText(html_text or plain_text or "", "html")
     message.attach(part2)
 
     message.add_header("In-Reply-To", in_reply_to)

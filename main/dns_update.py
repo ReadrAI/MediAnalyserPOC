@@ -1,6 +1,9 @@
 import os
+import sys
 import logging
 from xml.etree import ElementTree
+
+sys.path.append("../")
 
 from utils import dns_utils
 from utils import mail_utils
@@ -23,6 +26,8 @@ if past_ip != ip:
     errCount = ElementTree.fromstring(r.content).find("ErrCount").text
     if int(errCount) > 0:
         errText = ElementTree.fromstring(r.content).find("Err1").text
+        if errText is None:
+            errText = "Error text is None"
         mail_utils.sendEmailNotification(errText, ip)
         print("API error\n" + r.content)
     else:
